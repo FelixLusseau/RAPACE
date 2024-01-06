@@ -13,7 +13,7 @@ const bit<8>  TYPE_UDP  = 17;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<8> count_t; // Counter type to count packets
+typedef bit<32> count_t; // Counter type to count packets
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -155,9 +155,9 @@ control MyIngress(inout headers hdr,
             }
             
             count_t current_count_in;
-            count_in.read(current_count_in, (bit<32>)standard_metadata.ingress_port);
+            count_in.read(current_count_in, 0);
             current_count_in = current_count_in + 1;
-            count_in.write((bit<32>)standard_metadata.ingress_port, current_count_in);
+            count_in.write(0, current_count_in);
         }
     }
 }

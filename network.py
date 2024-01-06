@@ -7,6 +7,7 @@ net.setLogLevel("info")
 net.enableCli()
 
 # Network definition
+net.addP4Switch('s1')
 net.setP4Source("s1", "firewall.p4")
 net.addHost("h1")
 net.addHost("h2")

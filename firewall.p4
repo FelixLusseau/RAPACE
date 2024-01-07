@@ -13,7 +13,6 @@ const bit<8>  TYPE_UDP  = 17;
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
-typedef bit<32> count_t; // Counter type to count packets
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -76,10 +75,6 @@ struct headers {
     udp_t        udp;
 }
 
-header cnt_t {
-    count_t value;  // cnt header only contains one field: the value of the counter that is sent
-}
-
 /*************************************************************************
 *********************** P A R S E R  ***********************************
 *************************************************************************/
@@ -137,7 +132,8 @@ control MyIngress(inout headers hdr,
                   inout standard_metadata_t standard_metadata) {
 
     // Counter of incoming packets that contain the counter
-    register<count_t>(64) count_in;
+    counter(1, CounterType.packets) count_in;
+    direct_counter(CounterType.packets) rule_counter;
 
     action drop() {
         mark_to_drop(standard_metadata);
@@ -152,12 +148,15 @@ control MyIngress(inout headers hdr,
             meta.dstPort: exact;
             hdr.ipv4.protocol: exact;
         }
+
         actions = {
             drop;
             NoAction;
         }
+        
         size = 1024;
         default_action = NoAction;
+        counters = rule_counter;
     }
 
     apply {
@@ -173,11 +172,8 @@ control MyIngress(inout headers hdr,
                 standard_metadata.egress_spec = 1;
             }
             
-            count_t current_count_in;
-            count_in.read(current_count_in, 0);
-            current_count_in = current_count_in + 1;
-            count_in.write(0, current_count_in);
-
+            // Count the entering packets
+            count_in.count(0);
            
             if (hdr.ipv4.protocol == TYPE_TCP){
                 meta.dstPort = hdr.tcp.dstPort;

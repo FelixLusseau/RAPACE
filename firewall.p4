@@ -64,7 +64,9 @@ header udp_t{
 }
 
 struct metadata {
-    /* empty */
+    bit<14> src_dst_hash;
+    bit<16> srcPort;
+    bit<16> dstPort;
 }
 
 struct headers {
@@ -137,9 +139,26 @@ control MyIngress(inout headers hdr,
     // Counter of incoming packets that contain the counter
     register<count_t>(64) count_in;
 
-    // action drop() {
-    //     mark_to_drop(standard_metadata);
-    // }
+    action drop() {
+        mark_to_drop(standard_metadata);
+    }
+
+    // table fw_tcp {
+    table fw {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: exact;
+            // meta.srcPort: exact;
+            meta.dstPort: exact;
+            hdr.ipv4.protocol: exact;
+        }
+        actions = {
+            drop;
+            NoAction;
+        }
+        size = 1024;
+        default_action = NoAction;
+    }
 
     apply {
         // Only if IPV4 the rule is applied. Therefore other packets will not be forwarded.
@@ -158,6 +177,19 @@ control MyIngress(inout headers hdr,
             count_in.read(current_count_in, 0);
             current_count_in = current_count_in + 1;
             count_in.write(0, current_count_in);
+
+           
+            if (hdr.ipv4.protocol == TYPE_TCP){
+                meta.dstPort = hdr.tcp.dstPort;
+            }
+            else if (hdr.ipv4.protocol == TYPE_UDP){
+                meta.dstPort = hdr.udp.dstPort;
+            }
+            else {
+                // drop();
+            }
+
+            fw.apply(); // Apply the firewall rules
         }
     }
 }

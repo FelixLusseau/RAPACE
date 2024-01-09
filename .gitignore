@@ -2,3 +2,4 @@ log/
 pcap/
 *.p4i
 *.json
+__pycache__/

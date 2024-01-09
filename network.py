@@ -7,9 +7,7 @@ net.setLogLevel("info")
 net.enableCli()
 
 # Network definition
-# net.addP4Switch('s1')
-net.addP4Switch('s1', cli_input='firewall/firewall-commands.txt')
-net.setP4Source("s1", "firewall/firewall.p4")
+net.addP4Switch('s1')
 net.addHost("h1")
 net.addHost("h2")
 

@@ -21,28 +21,35 @@ class FirewallController(cmd2.Cmd):
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'firewall')
 
-    def rules_counters(self):
+    def see_filters(self):
         nb_entries = self.controller.table_num_entries('fw')
+        if nb_entries == 0:
+            print("No rule")
+            print("\u200B")
+            return
         # print(str(self.controller.table_dump('fw')))
         for i in range(0,nb_entries):
             print("\nRule " + str(i) + " : ")
             print(str(self.controller.table_dump_entry('fw', i)))
             self.controller.counter_read('rule_counter', i)
+        print("\u200B")
 
-    def total_counter(self):
+    def see_load(self):
         print("Total counter: ")
         self.controller.counter_read('count_in', 0)
+        print("\u200B")
 
     def add_fw_rule(self, flow):
         self.controller.table_add("fw", "drop", flow, [])
         print("Rule : drop " + str(flow) + " added")
+        print("\u200B")
     
     # cmd2 methods
-    def do_rules_counters(self, args):
-        self.rules_counters()
-
-    def do_total_counter(self, args):
-        self.total_counter()
+    def do_see(self, args):
+        if args == 'filters':
+            self.see_filters()
+        elif args == 'load':
+            self.see_load()
 
     def do_add_fw_rule(self, args):
         self.add_fw_rule(args.split())

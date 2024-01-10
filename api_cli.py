@@ -1,42 +1,74 @@
+import subprocess
+from time import sleep
 import cmd2
 
 def swap(node_id, equipment, *args):
-    pass  # Implement your logic here
+    pass
 
 def see_topology():
     print("coucou")
-    pass  # Implement your logic here
+    pass
 
 def change_weight(link, weight):
-    pass  # Implement your logic here
+    pass
 
 def remove_link(link):
-    pass  # Implement your logic here
+    pass
 
 def add_link(link):
-    pass  # Implement your logic here
+    pass
 
-def see_filters():
-    pass  # Implement your logic here
+def see_filters(firewall):
+    send_command_to_controller(firewall, 'see filters')
 
-def see_load():
-    pass  # Implement your logic here
+def see_load(controller):
+    send_command_to_controller(controller, 'see load')
 
 def see_tunnelled():
-    pass  # Implement your logic here
+    pass
 
-def add_fw_rule(flow):
-    pass  # Implement your logic here
+def send_command_to_controller(controller, command):
+    controller.stdin.write(command + '\n')
+    controller.stdin.flush()
+
+    # Lire la réponse
+    while True:
+        response = controller.stdout.readline()
+        if response == '\u200B\n':
+            break
+        print(response, end='')
+
+def add_fw_rule(firewall, flow):
+    send_command_to_controller(firewall, 'add_fw_rule ' + flow)
 
 class RAPACE_CLI(cmd2.Cmd):
     prompt = 'RAPACE_CLI> '
+
+    def __init__(self):
+        print("Starting network...")
+        self.firewall = subprocess.Popen(['python3', 'firewall/firewall_controller.py', 's1'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
+        sleep(3)
+        super().__init__()
+        
+    def do_exit(self, args):
+        self.firewall.stdin.close()
+        self.firewall.terminate()
+        self.firewall.wait(timeout=0.2)
+        return True
 
     def do_swap(self, args):
         args = args.split()
         swap(*args)
 
-    def do_see_topology(self, args):
-        see_topology()
+    def do_see(self, args):
+        if args == 'topology':
+            see_topology()
+        elif args == 'filters':
+            see_filters(self.firewall)
+        elif args == 'load':
+            see_load(self.firewall)
+        elif args == 'tunnelled':
+            see_tunnelled()
 
     def do_change_weight(self, args):
         args = args.split()
@@ -48,17 +80,8 @@ class RAPACE_CLI(cmd2.Cmd):
     def do_add_link(self, args):
         add_link(args)
 
-    def do_see_filters(self, args):
-        see_filters()
-
-    def do_see_load(self, args):
-        see_load()
-
-    def do_see_tunnelled(self, args):
-        see_tunnelled()
-
     def do_add_fw_rule(self, args):
-        add_fw_rule(args)
+        add_fw_rule(self.firewall, args)
 
 if __name__ == '__main__':
     app = RAPACE_CLI()

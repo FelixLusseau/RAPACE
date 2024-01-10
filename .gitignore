@@ -3,3 +3,4 @@ pcap/
 *.p4i
 *.json
 __pycache__/
+.vscode/

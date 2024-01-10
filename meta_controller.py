@@ -2,6 +2,18 @@ import subprocess
 from time import sleep
 import cmd2
 
+def send_command_to_controller(controller, command):
+    """Send a command to the controller and print the response"""
+    controller.stdin.write(command + '\n')
+    controller.stdin.flush()
+
+    # Lire la réponse
+    while True:
+        response = controller.stdout.readline()
+        if response == '\u200B\n':
+            break
+        print(response, end='')
+
 def swap(node_id, equipment, *args):
     pass
 
@@ -27,17 +39,6 @@ def see_load(controller):
 def see_tunnelled():
     pass
 
-def send_command_to_controller(controller, command):
-    controller.stdin.write(command + '\n')
-    controller.stdin.flush()
-
-    # Lire la réponse
-    while True:
-        response = controller.stdout.readline()
-        if response == '\u200B\n':
-            break
-        print(response, end='')
-
 def add_fw_rule(firewall, flow):
     send_command_to_controller(firewall, 'add_fw_rule ' + flow)
 
@@ -49,7 +50,8 @@ class RAPACE_CLI(cmd2.Cmd):
         self.firewall = subprocess.Popen(['python3', 'firewall/firewall_controller.py', 's1'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
         sleep(3)
         super().__init__()
-        
+
+    # cmd2 methods    
     def do_exit(self, args):
         self.firewall.stdin.close()
         self.firewall.terminate()

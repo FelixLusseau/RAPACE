@@ -50,8 +50,10 @@ def see_load():
 def see_tunnelled():
     pass
 
-def add_fw_rule(firewall, flow):
-    send_command_to_controller(firewall, 'add_fw_rule ' + flow)
+def add_fw_rule(flow):
+    for switch, controller in network['RAPACE']['Switches'].items():
+            if controller == 'firewall':
+                send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_fw_rule ' + flow)
 
 class RAPACE_CLI(cmd2.Cmd):
     prompt = '\033[32mRAPACE_CLI> \033[0m'
@@ -89,10 +91,16 @@ class RAPACE_CLI(cmd2.Cmd):
     delattr(cmd2.Cmd, 'do_shortcuts')
 
     # cmd2 methods -> create the commands we want
+    swap_argparser = cmd2.Cmd2ArgumentParser()
+    swap_argparser.add_argument('node_id', help="The name of the node")
+    swap_argparser.add_argument('equipment', choices=['firewall', 'router', 'loadbalancer'], help="The new equipment of the node")
+    swap_argparser.add_argument('args', nargs='*')
+    @cmd2.with_argparser(swap_argparser)
     def do_swap(self, args):
         """<node_id> <equipment> [args] - Swap the equipment of a node or add one"""
         args = args.split()
         swap(*args)
+
 
     see_argparser = cmd2.Cmd2ArgumentParser()
     see_argparser.add_argument('args', choices=['topology', 'filters', 'load', 'tunnelled'])
@@ -108,24 +116,42 @@ class RAPACE_CLI(cmd2.Cmd):
         elif opts.args == 'tunnelled':
             see_tunnelled()
 
+
+    change_weight_argparser = cmd2.Cmd2ArgumentParser()
+    change_weight_argparser.add_argument('link', help="A link is a string of the form ['src', 'dst', [port_on_src, port_on_dst]]")
+    change_weight_argparser.add_argument('weight', help="The new weight of the link")
+    @cmd2.with_argparser(change_weight_argparser)
     def do_change_weight(self, args):
         """<link> <weight> - Change the weight of a link"""
         args = args.split()
         change_weight(*args)
 
+
+    remove_link_argparser = cmd2.Cmd2ArgumentParser()
+    remove_link_argparser.add_argument('link', help="A link is a string of the form ['src', 'dst', [port_on_src, port_on_dst]]")
+    @cmd2.with_argparser(remove_link_argparser)
     def do_remove_link(self, args):
         """<link> - Remove a link"""
         remove_link(args)
 
+
+    add_link_argparser = cmd2.Cmd2ArgumentParser()
+    add_link_argparser.add_argument('link', help="A link is a string of the form ['src', 'dst', [port_on_src, port_on_dst]]")
+    @cmd2.with_argparser(add_link_argparser)
     def do_add_link(self, args):
         """<link> - Add a link"""
         add_link(args)
 
+
+    add_fw_rule_argparser = cmd2.Cmd2ArgumentParser()
+    add_fw_rule_argparser.add_argument('flow', nargs=4, help="A flow is a string of the form 'src_ip dst_ip dst_port protocol'")
+    @cmd2.with_argparser(add_fw_rule_argparser)
     def do_add_fw_rule(self, args):
         """<flow> - Add a firewall rule. A flow is a string of the form 'src_ip dst_ip dst_port protocol'"""
-        for switch, controller in network['RAPACE']['Switches'].items():
-            if controller == 'firewall':
-                add_fw_rule(network['RAPACE']['Controllers'][switch + 'Controller'], args)
+        flow = ' '.join(args.flow)
+        print(flow)
+        add_fw_rule(flow)
+
 
 if __name__ == '__main__':
     app = RAPACE_CLI()

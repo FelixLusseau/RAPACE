@@ -19,8 +19,9 @@ def swap(node_id, equipment, *args):
     pass
 
 def see_topology():
-    topo = network.copy()
-    del topo['RAPACE']['Controllers']
+    topo = network['RAPACE'].copy()
+    if 'Controllers' in topo:
+        del topo['Controllers']
     print(topo)
 
 def change_weight(link, weight):
@@ -93,15 +94,18 @@ class RAPACE_CLI(cmd2.Cmd):
         args = args.split()
         swap(*args)
 
-    def do_see(self, args):
+    see_argparser = cmd2.Cmd2ArgumentParser()
+    see_argparser.add_argument('args', choices=['topology', 'filters', 'load', 'tunnelled'])
+    @cmd2.with_argparser(see_argparser)
+    def do_see(self, opts):
         """topology|filters|load - See the topology, the filters, the load or the tunnelled flows"""
-        if args == 'topology':
+        if opts.args == 'topology':
             see_topology()
-        elif args == 'filters':
+        elif opts.args == 'filters':
             see_filters()
-        elif args == 'load':
+        elif opts.args == 'load':
             see_load()
-        elif args == 'tunnelled':
+        elif opts.args == 'tunnelled':
             see_tunnelled()
 
     def do_change_weight(self, args):

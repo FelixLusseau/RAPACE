@@ -81,11 +81,9 @@ class RAPACE_CLI(cmd2.Cmd):
         self.hidden_commands.append('macro')
         self.hidden_commands.append('set')
 
-    # cmd2 methods -> delete the commands we don't want (when possible)
+    # cmd2 methods -> delete the commands we don't want
     delattr(cmd2.Cmd, 'do_shell')
-    # delattr(cmd2.Cmd, 'do_alias')
     delattr(cmd2.Cmd, 'do_edit')
-    # delattr(cmd2.Cmd, 'do_macro')
     delattr(cmd2.Cmd, 'do_run_pyscript')
     delattr(cmd2.Cmd, 'do_run_script')
     delattr(cmd2.Cmd, 'do_shortcuts')

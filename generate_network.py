@@ -38,4 +38,4 @@ def generate_network():
     print("Network file generated.")
     return topology
 
-generate_network()
+# generate_network()

@@ -62,15 +62,3 @@ if __name__ == '__main__':
     if matches_regex(sys.argv[1], r's[0-9]+$'):
         app = FirewallController(sys.argv[1])
         app.cmdloop()
-    # if sys.argv[1] == 'rules_counters':
-    #     FirewallController('s1').rules_counters()
-
-    # elif sys.argv[1] == 'total_counter':
-    #     FirewallController('s1').total_counter()
-    
-    # elif sys.argv[1] == 'add_fw_rule':
-    #     FirewallController('s1').add_fw_rule(sys.argv[2:])
-    
-    # else:
-    #     print("Unknown command")
-    #     print("Usage: python firewall_controller.py [rules_counters|total_counter|add_fw_rule <flow>]")

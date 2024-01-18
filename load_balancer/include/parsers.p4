@@ -15,16 +15,6 @@ parser MyParser(packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType){
             TYPE_IPV4: parse_ipv4;
-            TYPE_TELEMETRY: parse_telemetry;
-            TYPE_FEEDBACK: parse_ipv4;
-            default: accept;
-        }
-    }
-
-    state parse_telemetry {
-        packet.extract(hdr.telemetry);
-        transition select(hdr.telemetry.nextHeaderType){
-            TYPE_IPV4: parse_ipv4;
             default: accept;
         }
     }
@@ -51,7 +41,6 @@ control MyDeparser(packet_out packet, in headers hdr) {
     apply {
 
         packet.emit(hdr.ethernet);
-        packet.emit(hdr.telemetry);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.tcp);
     }

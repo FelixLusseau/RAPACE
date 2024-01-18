@@ -65,18 +65,10 @@ struct feedback_t {
 }
 
 struct metadata {
-    bit<14> ecmp_hash;
-    bit<14> ecmp_group_id;
-    bit<4>  egress_type;
-    bit<48> feedback_ts;
-    bit<12> feedback_register_index;
-    @field_list(0)
-    feedback_t feedback;
 }
 
 struct headers {
     ethernet_t   ethernet;
-    telemetry_t  telemetry;
     ipv4_t       ipv4;
     tcp_t        tcp;
 }

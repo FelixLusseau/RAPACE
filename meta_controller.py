@@ -16,7 +16,25 @@ def send_command_to_controller(controller, command):
         print(response, end='')
 
 def swap(node_id, equipment, *args):
-    pass
+    """Swap the equipment of a node or add one"""
+    switch = node_id if node_id.startswith('s') else 's' + node_id
+    if switch not in network['RAPACE']['Switches']:
+        print("This node doesn't exist.")
+        # TODO: add the node
+        return
+    else:
+        controller = network['RAPACE']['Controllers'][switch + 'Controller']
+        controller.stdin.close()
+        controller.stdout.read()
+        controller.stderr.read()
+        controller.terminate()
+        del network['RAPACE']['Controllers'][switch + 'Controller']
+
+    network['RAPACE']['Switches'][switch] = equipment
+    path = equipment + '/' + equipment + '_controller.py'
+    network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  
+    print("The equipment of " + switch + " has been changed to " + equipment + ".")    
+            
 
 def see_topology():
     topo = network['RAPACE'].copy()
@@ -62,8 +80,8 @@ class RAPACE_CLI(cmd2.Cmd):
         print("Generating network...")
         global network
         network = generate_network()
-        print("Starting mininet...")
-        # self.mininet = subprocess.Popen(['sudo', 'python3', 'network.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # print("Starting mininet...")
+        # self.mininet = subprocess.Popen(['tmux', 'new-session', '-d', 'sudo', 'python3', 'network.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         # sleep(5)
         print("Starting network...")
         network['RAPACE']['Controllers'] = {} 
@@ -96,8 +114,10 @@ class RAPACE_CLI(cmd2.Cmd):
     @cmd2.with_argparser(swap_argparser)
     def do_swap(self, args):
         """<node_id> <equipment> [args] - Swap the equipment of a node or add one"""
-        args = args.split()
-        swap(*args)
+        node_id = args.node_id
+        equipment = args.equipment
+        extra_args = args.args
+        swap(node_id, equipment, *extra_args)
 
 
     see_argparser = cmd2.Cmd2ArgumentParser()

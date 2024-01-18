@@ -2,6 +2,7 @@ import subprocess
 from time import sleep
 import cmd2
 from generate_network import generate_network
+import ast
 
 def send_command_to_controller(controller, command):
     """Send a command to the controller and print the response"""
@@ -20,7 +21,7 @@ def swap(node_id, equipment, *args):
     switch = node_id if node_id.startswith('s') else 's' + node_id
     if switch not in network['RAPACE']['Switches']:
         print("This node doesn't exist.")
-        # TODO: add the node
+        # TODO: add the node ?
         return
     else:
         controller = network['RAPACE']['Controllers'][switch + 'Controller']
@@ -43,18 +44,31 @@ def see_topology():
     print(topo)
 
 def change_weight(link, weight):
-    pass
+    if isinstance(link, str):
+        link = ast.literal_eval(link)
+    mininet.updateLink(*link, weight=weight)
+    network['RAPACE']['Links'][network['RAPACE']['Links'].index(link)].append("weight = " + weight)
+    print("Weight of " + str(link) + " changed to " + weight + ".")
+    # TODO: update the shortest paths
 
 def remove_link(link):
-    pass
+    if isinstance(link, str):
+        link = ast.literal_eval(link)
+    mininet.deleteLink(*link)
+    network['RAPACE']['Links'].remove(link)
+    print("Link " + str(link) + " removed.")    
 
 def add_link(link):
-    pass
+    if isinstance(link, str):
+        link = ast.literal_eval(link)
+    mininet.addLink(*link)
+    network['RAPACE']['Links'].append(link)
+    print("Link " + str(link) + " added.")
 
 def see_filters():
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'firewall':
-            print("Filters for switch " + switch + " :")
+            print("Filtered packets of switch " + switch + " :")
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see filters')
             print("\n")
 
@@ -66,7 +80,11 @@ def see_load():
             print("\n")
 
 def see_tunnelled():
-    pass
+    for switch, controller in network['RAPACE']['Switches'].items():
+        if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'router':
+            print("Tunnelled packets of switch " + switch + " :")
+            send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see tunnelled')
+            print("\n")
 
 def add_fw_rule(flow):
     for switch, controller in network['RAPACE']['Switches'].items():
@@ -80,9 +98,10 @@ class RAPACE_CLI(cmd2.Cmd):
         print("Generating network...")
         global network
         network = generate_network()
-        # print("Starting mininet...")
-        # self.mininet = subprocess.Popen(['tmux', 'new-session', '-d', 'sudo', 'python3', 'network.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        # sleep(5)
+        from network import runMininet # import when network.py is generated
+        print("Starting mininet...")
+        global mininet
+        mininet = runMininet()
         print("Starting network...")
         network['RAPACE']['Controllers'] = {} 
         for switch, controller in network['RAPACE']['Switches'].items():
@@ -141,8 +160,7 @@ class RAPACE_CLI(cmd2.Cmd):
     @cmd2.with_argparser(change_weight_argparser)
     def do_change_weight(self, args):
         """<link> <weight> - Change the weight of a link"""
-        args = args.split()
-        change_weight(*args)
+        change_weight(args.link, args.weight)
 
 
     remove_link_argparser = cmd2.Cmd2ArgumentParser()
@@ -150,7 +168,7 @@ class RAPACE_CLI(cmd2.Cmd):
     @cmd2.with_argparser(remove_link_argparser)
     def do_remove_link(self, args):
         """<link> - Remove a link"""
-        remove_link(args)
+        remove_link(args.link)
 
 
     add_link_argparser = cmd2.Cmd2ArgumentParser()
@@ -158,7 +176,7 @@ class RAPACE_CLI(cmd2.Cmd):
     @cmd2.with_argparser(add_link_argparser)
     def do_add_link(self, args):
         """<link> - Add a link"""
-        add_link(args)
+        add_link(args.link)
 
 
     add_fw_rule_argparser = cmd2.Cmd2ArgumentParser()
@@ -170,7 +188,7 @@ class RAPACE_CLI(cmd2.Cmd):
         print(flow)
         add_fw_rule(flow)
 
-
+# Main function
 if __name__ == '__main__':
     app = RAPACE_CLI()
     app.cmdloop()

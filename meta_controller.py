@@ -3,6 +3,8 @@ from time import sleep
 import cmd2
 from generate_network import generate_network
 import ast
+# import networkx as nx
+# import matplotlib.pyplot as plt
 
 def send_command_to_controller(controller, command):
     """Send a command to the controller and print the response"""
@@ -42,6 +44,23 @@ def see_topology():
     if 'Controllers' in topo:
         del topo['Controllers']
     print(topo)
+
+    # G = nx.Graph()
+
+    # # Ajoutez les switches et les hôtes comme nœuds
+    # for node in network['RAPACE']['Switches']:
+    #     G.add_node(node)
+    # for node in network['RAPACE']['Hosts']:
+    #     G.add_node(node)
+
+    # # Ajoutez les liens comme arêtes
+    # for link in network['RAPACE']['Links']:
+    #     # Supprimez les poids des liens pour la visualisation
+    #     link = [node for node in link if not node.startswith('weight=')]
+    #     G.add_edge(*link)
+    
+    # nx.draw(G, with_labels=True)
+    # plt.show()
 
 def change_weight(link, weight):
     if isinstance(link, str):

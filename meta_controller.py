@@ -110,6 +110,15 @@ def add_fw_rule(flow):
             if controller == 'firewall':
                 send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_fw_rule ' + flow)
 
+def set_rate_lb(rate):
+    for switch, controller in network['RAPACE']['Switches'].items():
+            if controller == 'load_balancer':
+                send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_rate_lb ' + rate)
+
+def add_encap_node(flow, node_id):
+    switch = node_id if node_id.startswith('s') else 's' + node_id
+    pass
+
 class RAPACE_CLI(cmd2.Cmd):
     prompt = '\033[32mRAPACE_CLI> \033[0m'
 
@@ -147,7 +156,7 @@ class RAPACE_CLI(cmd2.Cmd):
     # cmd2 methods -> create the commands we want
     swap_argparser = cmd2.Cmd2ArgumentParser()
     swap_argparser.add_argument('node_id', help="The name of the node")
-    swap_argparser.add_argument('equipment', choices=['firewall', 'router', 'loadbalancer'], help="The new equipment of the node")
+    swap_argparser.add_argument('equipment', choices=['firewall', 'router', 'load_balancer'], help="The new equipment of the node")
     swap_argparser.add_argument('args', nargs='*')
     @cmd2.with_argparser(swap_argparser)
     def do_swap(self, args):
@@ -204,8 +213,24 @@ class RAPACE_CLI(cmd2.Cmd):
     def do_add_fw_rule(self, args):
         """<flow> - Add a firewall rule. A flow is a string of the form 'src_ip dst_ip dst_port protocol'"""
         flow = ' '.join(args.flow)
-        print(flow)
         add_fw_rule(flow)
+
+    set_rate_lb_argparser = cmd2.Cmd2ArgumentParser()
+    set_rate_lb_argparser.add_argument('pkts/s', help="The new rate of the loadbalancer")
+    @cmd2.with_argparser(set_rate_lb_argparser)
+    def do_set_rate_lb(self, args):
+        """<pkts/s> - Set the rate of the loadbalancer"""
+        set_rate_lb(args.pkts_s)
+
+    add_encap_node_argparser = cmd2.Cmd2ArgumentParser()
+    add_encap_node_argparser.add_argument('flow', nargs=4, help="The flow to encapsulate")
+    add_encap_node_argparser.add_argument('node_id', help="The name of the node")
+    @cmd2.with_argparser(add_encap_node_argparser)
+    def do_add_encap_node(self, args):
+        """<flow> <node_id> - Add an encapsulation node"""
+        flow = ' '.join(args.flow)
+        add_encap_node(flow, args.node_id)
+        
 
 # Main function
 if __name__ == '__main__':

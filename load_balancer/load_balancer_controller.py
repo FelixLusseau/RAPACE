@@ -22,6 +22,20 @@ class LoadBalancerController(cmd2.Cmd):
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'load_balancer')
 
+    def table_update(self, table_name: str, action_name: str, key: list, params: list, force_add=False):
+        if force_add:
+            self.controller.table_add(table_name, action_name, key, params)
+            return
+        handle = self.controller.get_handle_from_match(table_name, key)
+        if handle is not None:
+            self.controller.table_modify(table_name, action_name, handle, params)
+        else:
+            self.controller.table_add(table_name, action_name, key, params)
+        
+    def reset_state(self):
+        self.controller.reset_state()
+        self.controller.table_clear("port_to_nhop")
+
     def see_load(self,args):
         print("Total counter: ")
         self.controller.counter_read('count_in', 0)
@@ -72,8 +86,22 @@ class LoadBalancerController(cmd2.Cmd):
             self.host_connected.remove(i)
             self.controller.table_delete_match("port_to_nhop",[i[1]])
 
-    def do_show_table(self, args):
-        self.controller.table_dump("port_to_nhop")
+    def see_table(self):
+        nb_entries = self.controller.table_num_entries("port_to_nhop")
+        if nb_entries == 0 or nb_entries is None:
+            print("No rule")
+            print("\u200B")
+            return
+        for i in range(0, nb_entries):
+            print("\nRule " + str(i) + " : ")
+            print(str(self.controller.table_dump_entry('port_to_nhop', i)))
+        print("\u200B")                        
+
+    def do_see(self, args):
+        if args == 'table':
+            self.see_table()
+        elif args == 'load':
+            self.see_load()
 
 def matches_regex(string, regex):
     return re.match(regex, string) is not None

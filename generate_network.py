@@ -12,7 +12,7 @@ def generate_network():
         file.write('def runMininet():\n')
         file.write('\tnet = NetworkAPI()\n\n')
         file.write('\t# Network general options\n')
-        # file.write('\tnet.setLogLevel("info")\n')
+        # file.write('\tnet.setLogLevel("debug")\n')
         file.write('\tnet.disableCli()\n\n')
         file.write('\t# Network definition\n')
         for switch, value in topology['RAPACE']['Switches'].items():
@@ -26,7 +26,7 @@ def generate_network():
             file.write('\tnet.addLink(' + args + ')\n')
         file.write('\n')
         file.write('\t# Assignment strategy\n')
-        file.write('\tnet.mixed()\n\n')
+        file.write('\tnet.l2()\n\n')
         file.write('\t# Nodes general options\n')
         file.write('\tnet.enablePcapDumpAll()\n')
         file.write('\tnet.enableLogAll()\n\n')

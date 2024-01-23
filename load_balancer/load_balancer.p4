@@ -36,13 +36,34 @@ control MyIngress(inout headers hdr,
        //set the destination mac address that we got from the match in the table
         hdr.ethernet.dstAddr = dstAddr;
 
-        if(port != 0):
-            standard_metadata.egress_spec = port;
-        else:
-            
+        standard_metadata.egress_spec = port;            
 
         //decrease ttl by 1
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+
+    action ecmp_hash(bit <16> num_nhops){
+        hash(meta.ecmp_hash,
+	    HashAlgorithm.crc16,
+	    (bit<1>)0,
+	    { hdr.ipv4.srcAddr,
+	      hdr.ipv4.dstAddr,
+          hdr.tcp.srcPort,
+          hdr.tcp.dstPort,
+          hdr.ipv4.protocol},
+	    num_nhops);
+    }
+
+    table ecmp_nhop {
+        key = {
+            meta.ecmp_hash: exact;
+        }
+        actions = {
+            set_nhop;
+            drop;
+        }
+        size = 1024;
+        default_action = drop;
     }
 
     table port_to_nhop {
@@ -51,6 +72,7 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             set_nhop;
+            ecmp_hash;
             drop;
         }   
         size = 1024;
@@ -60,7 +82,11 @@ control MyIngress(inout headers hdr,
     apply {
         //Only forward packets if they are IP and TTL > 1
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1){
-            port_to_nhop.apply();
+            switch (port_to_nhop.apply().action_run){
+                ecmp_hash: {
+                    ecmp_nhop.apply();
+                }
+            }
         }
     }
 }

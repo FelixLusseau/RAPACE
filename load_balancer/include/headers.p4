@@ -3,8 +3,6 @@
 *************************************************************************/
 
 const bit<16> TYPE_IPV4 = 0x800;
-const bit<16> TYPE_TELEMETRY = 0x7777;
-const bit<16> TYPE_FEEDBACK = 0x7778;
 
 const bit<4>  TYPE_EGRESS_HOST = 1;
 const bit<4>  TYPE_EGRESS_SWITCH = 2;
@@ -17,11 +15,6 @@ header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
-}
-
-header telemetry_t {
-    bit<16> enq_qdepth;
-    bit<16> nextHeaderType;
 }
 
 header ipv4_t {
@@ -59,12 +52,8 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
-
-struct feedback_t {
-
-}
-
 struct metadata {
+    bit<14> ecmp_hash;
 }
 
 struct headers {

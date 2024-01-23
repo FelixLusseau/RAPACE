@@ -22,11 +22,16 @@ class LoadBalancerController(cmd2.Cmd):
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'load_balancer')
         self.reset_state()
+        self.set_table_defaults()
         self.update_neighbor()
         
     def reset_state(self):
         self.controller.reset_state()
         self.controller.table_clear("port_to_nhop")
+
+    def set_table_defaults(self):
+        self.controller.table_set_default("port_to_nhop", "drop", [])
+        self.controller.table_set_default("ecmp_nhop","drop",[])
 
     #get the mac address of the interface of the switch facing port in
     def get_mac_address_port_in(self):
@@ -34,26 +39,54 @@ class LoadBalancerController(cmd2.Cmd):
             if self.port_in == self.topo.node_to_node_port_num(self.sw_name, sw):
                 return self.topo.node_to_node_mac(sw, self.sw_name)
 
+    #return the list of all the "out" port of a load_balancer
+    def get_list_port_connected(self):
+        port_list = []
+
+        for sw in self.topo.get_switches_connected_to(self.sw_name):
+            sw_port = self.topo.node_to_node_port_num(self.sw_name, sw)
+            if(sw_port != self.port_in):
+                port_list.append(sw_port)
+
+        return port_list
 
     def update_neighbor(self):
         
         mac_address_port_in = self.get_mac_address_port_in()
+
+        #check if we have a port_in existing
         if mac_address_port_in is None:
             print(f"No switches facing port_in: {self.port_in}")
             return 0
 
-        #we scan neighboor
+        #get the number of port out possibilites
+        num_nhop = len(self.topo.get_switches_connected_to(self.sw_name)) - 1
+        if num_nhop < 0:
+            num_nhop = 0 #just in case to avoid crash if non sense topology happens
+
+        port_out = self.get_list_port_connected()
+        index_out = 0
+
+        #we scan neighbor to create our tables
+        #table: port_to_nhop : if port_out, then set next_hop to port_in
+        #                      else hash function to get a random port out
+        #table: ecmp_nhop : from the hash result return a valid port_out
+            
         for sw in self.topo.get_switches_connected_to(self.sw_name):
             sw_port = self.topo.node_to_node_port_num(self.sw_name, sw)
             sw_mac = self.topo.node_to_node_mac(self.sw_name, sw)
             
             #If it comes from port_in return 0 for port_out
             if sw_port == self.port_in:
-                self.controller.table_add("port_to_nhop", "set_nhop", [str(sw_port)], [str(sw_mac), str(0)])
+                self.controller.table_add("port_to_nhop", "ecmp_hash", [str(sw_port)], [str(num_nhop)])
+                print(f"Table: port_to_nhop. Line added: {sw_port} ecmp_hash {num_nhop}\n")
             #Else send it to port_in
             else:
                 self.controller.table_add("port_to_nhop", "set_nhop", [str(sw_port)], [str(mac_address_port_in), str(self.port_in)])
-
+                print(f"Table: port_to_nhop. Line added: {sw_port} set_nhop {mac_address_port_in} {self.port_in}\n")
+                self.controller.table_add("ecmp_nhop", "set_nhop", [str(index_out)], [str(sw_mac), str(port_out[index_out])])
+                print(f"Table: ecmp_nhop. Line added: {index_out} ecmp_hash {sw_mac} {port_out[index_out]}\n")
+                index_out = index_out + 1
 
     def see_load(self,args):
         print("Total counter: ")

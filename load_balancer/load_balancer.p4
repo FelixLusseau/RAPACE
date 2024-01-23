@@ -25,6 +25,8 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
+    counter(1, CounterType.packets) count_in;
+
     action drop() {
         mark_to_drop(standard_metadata);
     }
@@ -82,6 +84,7 @@ control MyIngress(inout headers hdr,
     apply {
         //Only forward packets if they are IP and TTL > 1
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1){
+            count_in.count(0);
             switch (port_to_nhop.apply().action_run){
                 ecmp_hash: {
                     ecmp_nhop.apply();

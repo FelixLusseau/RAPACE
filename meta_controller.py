@@ -87,21 +87,21 @@ def add_link(link):
 def see_filters():
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'firewall':
-            print("Filtered packets of switch " + switch + " :")
+            print("Filtered packets of firewall " + switch + " :")
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see filters')
             print("\n")
 
 def see_load():
     for switch in network['RAPACE']['Switches']:
         if switch + 'Controller' in network['RAPACE']['Controllers']:
-            print("Load for switch " + switch + " :")
+            print("Load for " + network['RAPACE']['Switches'][switch] + " " + switch + " :")
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see load')
             print("\n")
 
 def see_tunnelled():
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'router':
-            print("Tunnelled packets of switch " + switch + " :")
+            print("Tunnelled packets of router " + switch + " :")
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see tunnelled')
             print("\n")
 

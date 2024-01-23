@@ -21,8 +21,28 @@ control MyVerifyChecksum(inout headers hdr, inout metadata meta) {
 control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
+
+    // Counter of incoming packets that contain the counter
+    counter(1, CounterType.packets) count_in;
+    counter(1, CounterType.packets) count_tunnelled;
+
+
     action drop() {
         mark_to_drop(standard_metadata);
+    }
+
+    action segRoute_port() {
+        standard_metadata.egress_spec = (bit<9>)hdr.segRoute.port;
+    }
+
+    action segRoute_finish() {
+        hdr.ethernet.etherType = TYPE_IPV4;
+    }
+
+    action segRoute_encap(bit<9> checkpoint) {
+        hdr.segRoute.setValid();
+        hdr.segRoute.checkpoint = checkpoint;
+        count_tunnelled.count(0);
     }
 
     action ecmp_group(bit<14> ecmp_group_id, bit<16> num_nhops){
@@ -31,8 +51,8 @@ control MyIngress(inout headers hdr,
 	    (bit<1>)0,
 	    { hdr.ipv4.srcAddr,
 	      hdr.ipv4.dstAddr,
-          hdr.tcp.srcPort,
-          hdr.tcp.dstPort,
+          meta.srcPort,
+          meta.dstPort,
           hdr.ipv4.protocol},
 	    num_nhops);
 
@@ -79,8 +99,38 @@ control MyIngress(inout headers hdr,
         default_action = drop;
     }
 
+    table encap_rules {
+        key = {
+            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: exact;
+            // meta.srcPort: exact;
+            meta.dstPort: exact;
+            hdr.ipv4.protocol: exact;
+        }
+        actions = {
+            segRoute_encap;
+        }
+        size = 1024;
+    }
+
     apply {
+        if (hdr.segRoute.isValid()){
+            if (hdr.segRoute.bos == 1){
+                segRoute_finish();
+            }
+            segRoute_port();
+        }
         if (hdr.ipv4.isValid()){
+            // Count the entering packets
+            count_in.count(0);
+
+            if (hdr.ipv4.protocol == TYPE_TCP){
+                meta.dstPort = hdr.tcp.dstPort;
+            }
+            else if (hdr.ipv4.protocol == TYPE_UDP){
+                meta.dstPort = hdr.udp.dstPort;
+            }
+            encap_rules.apply();
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {
                     ecmp_group_to_nhop.apply();

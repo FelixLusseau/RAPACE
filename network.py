@@ -15,6 +15,7 @@ def runMininet():
 	net.addHost('h2')
 
 	net.addLink('s1', 's2')
+	net.addLink('s3', 's1')
 	net.addLink('s1', 'h1')
 	net.addLink('s2', 'h2')
 

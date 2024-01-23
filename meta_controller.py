@@ -87,21 +87,21 @@ def add_link(link):
 def see_filters():
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'firewall':
-            print("Filtered packets of switch " + switch + " :")
+            print("Filtered packets of firewall " + switch + " :")
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see filters')
             print("\n")
 
 def see_load():
     for switch in network['RAPACE']['Switches']:
         if switch + 'Controller' in network['RAPACE']['Controllers']:
-            print("Load for switch " + switch + " :")
+            print("Load for " + network['RAPACE']['Switches'][switch] + " " + switch + " :")
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see load')
             print("\n")
 
 def see_tunnelled():
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'router':
-            print("Tunnelled packets of switch " + switch + " :")
+            print("Tunnelled packets of router " + switch + " :")
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see tunnelled')
             print("\n")
 
@@ -117,7 +117,9 @@ def set_rate_lb(rate):
 
 def add_encap_node(flow, node_id):
     switch = node_id if node_id.startswith('s') else 's' + node_id
-    pass
+    for switch, controller in network['RAPACE']['Switches'].items():
+        if controller == 'router':
+            send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_encap_node ' + flow + ' ' + node_id)
 
 class RAPACE_CLI(cmd2.Cmd):
     prompt = '\033[32mRAPACE_CLI> \033[0m'

@@ -17,6 +17,7 @@ class LoadBalancerController(cmd2.Cmd):
         self.topo = load_topo('topology.json')
         self.sw_name = sw_name
         self.port_in = int(port_in)
+        self.packet_rate = 1
         self.host_connected = [] #mac_adress, port source
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
@@ -28,10 +29,16 @@ class LoadBalancerController(cmd2.Cmd):
     def reset_state(self):
         self.controller.reset_state()
         self.controller.table_clear("port_to_nhop")
+        self.controller.table_clear("ecmp_nhop")
+        self.controller.table_clear("packet_rate_filter")
 
     def set_table_defaults(self):
         self.controller.table_set_default("port_to_nhop", "drop", [])
         self.controller.table_set_default("ecmp_nhop","drop",[])
+        self.controller.table_set_default("packet_rate_filter","drop",[])
+
+    def set_packet_rate(self, rate):
+        self.packet_rate = rate
 
     #get the mac address of the interface of the switch facing port in
     def get_mac_address_port_in(self):
@@ -109,6 +116,10 @@ class LoadBalancerController(cmd2.Cmd):
             self.see_table()
         elif args == 'load':
             self.see_load()
+
+    def do_set_pck_rate(self, rate):
+        set_pck_rate(rate)
+
 
 def matches_regex(string, regex):
     return re.match(regex, string) is not None

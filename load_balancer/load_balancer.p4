@@ -35,7 +35,7 @@ control MyIngress(inout headers hdr,
 
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
 
-       //set the destination mac address that we got from the match in the table
+        //set the destination mac address that we got from the match in the table
         hdr.ethernet.dstAddr = dstAddr;
 
         standard_metadata.egress_spec = port;            
@@ -79,11 +79,15 @@ control MyIngress(inout headers hdr,
         }   
         size = 1024;
         default_action = drop;
+        meters = {
+            Meter;
+        }
     }
 
     apply {
         //Only forward packets if they are IP and TTL > 1
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1){
+
             count_in.count(0);
             switch (port_to_nhop.apply().action_run){
                 ecmp_hash: {

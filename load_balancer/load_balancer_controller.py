@@ -16,74 +16,49 @@ class LoadBalancerController(cmd2.Cmd):
         super().__init__()
         self.topo = load_topo('topology.json')
         self.sw_name = sw_name
-        self.port_in = port_in
+        self.port_in = int(port_in)
         self.host_connected = [] #mac_adress, port source
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'load_balancer')
         self.reset_state()
-        self.set_table_defaults()
-
-    def set_table_defaults(self):
-        self.controller.table_set_default("port_to_nhop", "drop", [])
+        self.update_neighbor()
         
     def reset_state(self):
         self.controller.reset_state()
         self.controller.table_clear("port_to_nhop")
 
+    #get the mac address of the interface of the switch facing port in
+    def get_mac_address_port_in(self):
+        for sw in self.topo.get_switches_connected_to(self.sw_name):
+            if self.port_in == self.topo.node_to_node_port_num(self.sw_name, sw):
+                return self.topo.node_to_node_mac(sw, self.sw_name)
+
+
+    def update_neighbor(self):
+        
+        mac_address_port_in = self.get_mac_address_port_in()
+        if mac_address_port_in is None:
+            print(f"No switches facing port_in: {self.port_in}")
+            return 0
+
+        #we scan neighboor
+        for sw in self.topo.get_switches_connected_to(self.sw_name):
+            sw_port = self.topo.node_to_node_port_num(self.sw_name, sw)
+            sw_mac = self.topo.node_to_node_mac(self.sw_name, sw)
+            
+            #If it comes from port_in return 0 for port_out
+            if sw_port == self.port_in:
+                self.controller.table_add("port_to_nhop", "set_nhop", [str(sw_port)], [str(sw_mac), str(0)])
+            #Else send it to port_in
+            else:
+                self.controller.table_add("port_to_nhop", "set_nhop", [str(sw_port)], [str(mac_address_port_in), str(self.port_in)])
+
+
     def see_load(self,args):
         print("Total counter: ")
         self.controller.counter_read('count_in', 0)
         print("\u200B")
-
-    def do_add_line_table(self, args):
-        self.add_line(25, 52656, 25)
-
-
-    def add_line(self, port_src, mc_address_port_in, port_in):
-        self.controller.table_add("port_to_nhop", "set_nhop", [port_src], [[mc_address_port_in, port_in]])
-        print("Line added : port_to_nhop" + str(port_src) + "to" + str(port_in))
-        print("\u200B")
-
-    def get_neighbor(self,args):
-        neighbor = self.topo.get_hosts_connected_to(self.sw_name)
-        neighbor_list=[]
-        for i in neighbor:
-            neighbor_list.append([self.topo.get_host_mac(i), self.topo.node_to_node_port_num(self.sw_name,i)])
-        return neighbor_list
-
-    def do_update_neighbor(self,args):
-        find = 0 
-        neighbor_list = self.get_neighbor(self)
-        node_to_delete = []
-        node_to_add = []
-
-        #get a current neighbor see if it's inside the database
-        #update the database in case
-        for i in neighbor_list:
-            for j in self.host_connected:
-                if i == j:
-                    find = 1
-                elif i[1] == j[1]:
-                    node_to_delete.append(j)
-                    node_to_add.append(i)
-            if find == 0:
-                node_to_add.append(i)
-            find = 0
-
-        self.remove_to_list(self, node_to_delete)
-        self.add_to_list(self, node_to_add)
-
-
-    def add_to_list(self, node_to_add):
-        for i in node_to_add:
-            self.host_connected.append(i)
-            self.add_line_table(self, i[1], i[0], self.port_in)
-
-    def remove_to_list(self, node_list):
-        for i in node_list:
-            self.host_connected.remove(i)
-            self.controller.table_delete_match("port_to_nhop",[i[1]])
 
     def see_table(self):
         nb_entries = self.controller.table_num_entries("port_to_nhop")

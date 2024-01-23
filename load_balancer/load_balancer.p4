@@ -25,24 +25,8 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register <bit<REGISTER_WIDTH>>(REGISTER_SIZE) loadbalance_seed;
-
     action drop() {
         mark_to_drop(standard_metadata);
-    }
-
-    action update_flow_seed(){
-        bit<12> register_index;
-
-        hash(register_index,
-	    HashAlgorithm.crc16,
-	    (bit<1>)0,
-	    { hdr.ipv4.dstAddr,
-	      hdr.ipv4.srcAddr,
-              hdr.tcp.srcPort,
-              hdr.tcp.dstPort,
-              hdr.ipv4.protocol},
-	      (bit<12>)REGISTER_SIZE);
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
@@ -52,8 +36,10 @@ control MyIngress(inout headers hdr,
        //set the destination mac address that we got from the match in the table
         hdr.ethernet.dstAddr = dstAddr;
 
-        //set the output port that we also get from the table
-        standard_metadata.egress_spec = port;
+        if(port != 0):
+            standard_metadata.egress_spec = port;
+        else:
+            
 
         //decrease ttl by 1
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
@@ -64,12 +50,11 @@ control MyIngress(inout headers hdr,
             standard_metadata.ingress_port: exact;
         }
         actions = {
-            //send_to_out;
             set_nhop;
             drop;
         }   
         size = 1024;
-        //default_action = send_to_out;
+        default_action = drop;
     }
 
     apply {

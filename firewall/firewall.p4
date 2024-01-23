@@ -63,7 +63,6 @@ header udp_t{
 }
 
 struct metadata {
-    bit<14> src_dst_hash;
     bit<16> srcPort;
     bit<16> dstPort;
 }
@@ -139,7 +138,6 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    // table fw_tcp {
     table fw {
         key = {
             hdr.ipv4.srcAddr: exact;

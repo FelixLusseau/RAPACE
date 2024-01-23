@@ -117,7 +117,9 @@ def set_rate_lb(rate):
 
 def add_encap_node(flow, node_id):
     switch = node_id if node_id.startswith('s') else 's' + node_id
-    pass
+    for switch, controller in network['RAPACE']['Switches'].items():
+        if controller == 'router':
+            send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_encap_node ' + flow + ' ' + node_id)
 
 class RAPACE_CLI(cmd2.Cmd):
     prompt = '\033[32mRAPACE_CLI> \033[0m'

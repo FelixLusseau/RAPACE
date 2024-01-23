@@ -1,7 +1,7 @@
 RAPACE:
   Switches:
-    s1: firewall
-    s2: firewall
+    s1: router
+    s2: router
     s3: router
   Hosts:
     h1:
@@ -10,7 +10,7 @@ RAPACE:
     - [s1, s2]
     # - [s1, s2, 1, 1]
     # - [s2, s3]
-    # - [s3, s1]
+    - [s3, s1]
     - [s1, h1]
     - [s2, h2]
       

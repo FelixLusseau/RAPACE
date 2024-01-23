@@ -21,16 +21,11 @@ class LoadBalancerController(cmd2.Cmd):
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'load_balancer')
+        self.reset_state()
+        self.set_table_defaults()
 
-    def table_update(self, table_name: str, action_name: str, key: list, params: list, force_add=False):
-        if force_add:
-            self.controller.table_add(table_name, action_name, key, params)
-            return
-        handle = self.controller.get_handle_from_match(table_name, key)
-        if handle is not None:
-            self.controller.table_modify(table_name, action_name, handle, params)
-        else:
-            self.controller.table_add(table_name, action_name, key, params)
+    def set_table_defaults(self):
+        self.controller.table_set_default("port_to_nhop", "drop", [])
         
     def reset_state(self):
         self.controller.reset_state()
@@ -41,8 +36,12 @@ class LoadBalancerController(cmd2.Cmd):
         self.controller.counter_read('count_in', 0)
         print("\u200B")
 
-    def add_line_table(self, port_src, mc_address_port_in, port_in):
-        self.controller.table_add("port_to_nhop", "set_nhop", [port_src], [mc_address_port_in, port_in])
+    def do_add_line_table(self, args):
+        self.add_line(25, 52656, 25)
+
+
+    def add_line(self, port_src, mc_address_port_in, port_in):
+        self.controller.table_add("port_to_nhop", "set_nhop", [port_src], [[mc_address_port_in, port_in]])
         print("Line added : port_to_nhop" + str(port_src) + "to" + str(port_in))
         print("\u200B")
 

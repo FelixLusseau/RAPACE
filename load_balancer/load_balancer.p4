@@ -66,6 +66,7 @@ control MyIngress(inout headers hdr,
         actions = {
             //send_to_out;
             set_nhop;
+            drop;
         }   
         size = 1024;
         //default_action = send_to_out;
@@ -74,6 +75,7 @@ control MyIngress(inout headers hdr,
     apply {
         //Only forward packets if they are IP and TTL > 1
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1){
+            port_to_nhop.apply();
         }
     }
 }

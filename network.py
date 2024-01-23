@@ -4,7 +4,6 @@ def runMininet():
 	net = NetworkAPI()
 
 	# Network general options
-	net.setLogLevel("debug")
 	net.disableCli()
 
 	# Network definition

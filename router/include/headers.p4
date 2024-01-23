@@ -13,7 +13,7 @@ typedef bit<32> ip4Addr_t;
 
 header segRoute_t {
     bit<1>    bos;
-    bit<15>   port;
+    bit<9>    checkpoint;
 }
 
 header ethernet_t {

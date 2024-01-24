@@ -4,6 +4,7 @@ def runMininet():
 	net = NetworkAPI()
 
 	# Network general options
+	net.setLogLevel("debug")
 	net.disableCli()
 
 	# Network definition
@@ -13,6 +14,8 @@ def runMininet():
 	net.addP4Switch('s4')
 	net.addP4Switch('s5')
 	net.addP4Switch('s6')
+	net.addP4Switch('s4')
+	net.addP4Switch('s5')
 
 	net.addHost('h1')
 	net.addHost('h2')
@@ -20,11 +23,10 @@ def runMininet():
 	net.addLink('h1', 's1')
 	net.addLink('s1', 's2')
 	net.addLink('s2', 's3')
-	net.addLink('s2', 's4')
-	net.addLink('s5', 's3')
-	net.addLink('s5', 's4')
-	net.addLink('s5', 's6')
-	net.addLink('h2', 's6')
+	net.addLink('s1', 'h1')
+	net.addLink('s3', 's4')
+	net.addLink('s4', 'h2')
+	net.addLink('s2', 's5')
 
 	# Assignment strategy
 	net.l2()

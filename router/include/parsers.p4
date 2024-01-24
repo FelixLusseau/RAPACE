@@ -14,7 +14,7 @@ parser MyParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
         transition select(hdr.ethernet.etherType){
-            TYPE_SEGROUTING: parse_segrouting;
+            TYPE_SEGROUTE: parse_segrouting;
             TYPE_IPV4: parse_ipv4;
             default: accept;
         }

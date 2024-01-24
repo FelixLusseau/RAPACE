@@ -22,6 +22,7 @@ class RouterController(cmd2.Cmd):
         self.controller = swap(self.sw_name, 'router')
         self.set_table_defaults()
         self.route(self.sw_name)
+        self.controller.register_write('device_id_register', 0, sw_name[1:])
 
     def set_table_defaults(self):
         self.controller.table_set_default("ipv4_lpm", "drop", [])
@@ -30,6 +31,46 @@ class RouterController(cmd2.Cmd):
     def route(self, sw_name):
 
         switch_ecmp_groups = {sw_name:{} for sw_name in self.topo.get_p4switches().keys()}
+
+        # Parcourir tous les commutateurs
+        for sw_dst in self.topo.get_p4switches():
+            # Obtenir l'adresse de bouclage du commutateur
+            loopback_ip = self.topo.get_nodes()[sw_dst].get('loopback')
+
+            # Obtenir les chemins les plus courts vers le commutateur
+            paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+            # print("paths from {} to {} : {}".format(sw_name, sw_dst, paths))
+
+            if len(paths) == 1:
+                if len(paths[0]) == 1:
+                    continue
+                else:  
+                    next_hop = paths[0][1]
+                sw_port = self.topo.node_to_node_port_num(sw_name, next_hop)
+                dst_sw_mac = self.topo.node_to_node_mac(next_hop, sw_name)
+
+                # Ajouter la règle
+                print("table_add at {}:".format(sw_name))
+                # print("ipv4_lpm set_nhop " + str(loopback_ip) + " => " + str(dst_sw_mac) + " " + str(sw_port))
+                self.controller.table_add("ipv4_lpm", "set_nhop", [str(loopback_ip)],
+                                        [str(dst_sw_mac), str(sw_port)])
+                print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_sw_mac) + " " + str(sw_port))
+                self.controller.table_add("encap_routing", "segRoute_port", str(sw_dst[1:]), [str(dst_sw_mac), str(sw_port)])
+
+            elif len(paths) > 1:
+                next_hops = [x[1] for x in paths]
+                dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
+                                self.topo.node_to_node_port_num(sw_name, next_hop))
+                                for next_hop in next_hops]
+
+                # Ajouter la règle pour chaque chemin
+                for dst_mac, sw_port in dst_macs_ports:
+                    print("table_add at {}:".format(sw_name))
+                    # print("ipv4_lpm set_nhop " + str(loopback_ip) + " => " + str(dst_mac) + " " + str(sw_port))
+                    self.controller.table_add("ipv4_lpm", "set_nhop", [str(loopback_ip)],
+                                            [str(dst_mac), str(sw_port)])
+                    print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_sw_mac) + " " + str(sw_port))
+                    self.controller.table_add("encap_routing", "segRoute_port", str(sw_dst[1:]), [str(dst_sw_mac), str(sw_port)])
 
         for sw_dst in self.topo.get_p4switches():
 
@@ -42,23 +83,26 @@ class RouterController(cmd2.Cmd):
 
                     #add rule
                     print("table_add at {}:".format(sw_name))
+                    # print("ipv4_lpm set_nhop " + str(host_ip) + " => " + str(host_mac) + " " + str(sw_port))
                     self.controller.table_add("ipv4_lpm", "set_nhop", [str(host_ip)], [str(host_mac), str(sw_port)])
 
             #check if there are directly connected hosts
             else:
                 if self.topo.get_hosts_connected_to(sw_dst):
                     paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+                    # print("paths hosts from {} to {} : {}".format(sw_name, sw_dst, paths))
                     for host in self.topo.get_hosts_connected_to(sw_dst):
 
                         if len(paths) == 1:
                             next_hop = paths[0][1]
 
-                            host_ip = self.topo.get_host_ip(host) + "/24"
+                            host_ip = self.topo.get_host_ip(host) + "/32" #"/24"
                             sw_port = self.topo.node_to_node_port_num(sw_name, next_hop)
                             dst_sw_mac = self.topo.node_to_node_mac(next_hop, sw_name)
 
                             #add rule
                             print("table_add at {}:".format(sw_name))
+                            # print("ipv4_lpm set_nhop " + str(host_ip) + " => " + str(dst_sw_mac) + " " + str(sw_port))
                             self.controller.table_add("ipv4_lpm", "set_nhop", [str(host_ip)],
                                                                 [str(dst_sw_mac), str(sw_port)])
 
@@ -67,7 +111,7 @@ class RouterController(cmd2.Cmd):
                             dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
                                                 self.topo.node_to_node_port_num(sw_name, next_hop))
                                                 for next_hop in next_hops]
-                            host_ip = self.topo.get_host_ip(host) + "/24"
+                            host_ip = self.topo.get_host_ip(host) + "/32" #"/24"
 
                             #check if the ecmp group already exists. The ecmp group is defined by the number of next
                             #ports used, thus we can use dst_macs_ports as key

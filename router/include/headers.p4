@@ -3,7 +3,7 @@
 *************************************************************************/
 
 const bit<16> TYPE_IPV4 = 0x800;
-const bit<16> TYPE_SEGROUTING = 0x1234;
+const bit<16> TYPE_SEGROUTE = 0x1234;
 const bit<8>  TYPE_TCP  = 6;
 const bit<8>  TYPE_UDP  = 17;
 
@@ -12,8 +12,8 @@ typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 
 header segRoute_t {
-    bit<1>    bos;
-    bit<9>    checkpoint;
+    // bit<1>    bos;
+    bit<8>    checkpoint;
 }
 
 header ethernet_t {

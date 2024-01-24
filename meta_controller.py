@@ -3,6 +3,7 @@ from time import sleep
 import cmd2
 from generate_network import generate_network
 import ast
+import json
 # import networkx as nx
 # import matplotlib.pyplot as plt
 
@@ -132,6 +133,17 @@ class RAPACE_CLI(cmd2.Cmd):
         print("Starting mininet...")
         global mininet
         mininet = runMininet()
+
+        # Add loopback addresses to the topology
+        with open('topology.json', 'r') as f:
+            data = json.load(f)
+
+        for node in data['nodes']:
+            node['loopback'] = '10.100.0.' + node['id'][1:] + '/32'
+
+        with open('topology.json', 'w') as f:
+            json.dump(data, f, indent=4)
+
         print("Starting network...")
         network['RAPACE']['Controllers'] = {} 
         for switch, controller in network['RAPACE']['Switches'].items():

@@ -26,20 +26,33 @@ control MyIngress(inout headers hdr,
     counter(1, CounterType.packets) count_in;
     counter(1, CounterType.packets) count_tunnelled;
 
+    // Register to store the device id
+    register<bit<8>>(1) device_id_register;
+
+    bool is_tunnelled = false;
 
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
-    action segRoute_port() {
-        standard_metadata.egress_spec = (bit<9>)hdr.segRoute.port;
+    action segRoute_port(macAddr_t dstAddr, egressSpec_t port) {
+        //set the src mac address as the previous dst, this is not correct right?
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+
+       //set the destination mac address that we got from the match in the table
+        hdr.ethernet.dstAddr = dstAddr;
+
+        //set the output port that we also get from the table
+        standard_metadata.egress_spec = port;
     }
 
     action segRoute_finish() {
         hdr.ethernet.etherType = TYPE_IPV4;
+        hdr.segRoute.setInvalid();
     }
 
-    action segRoute_encap(bit<9> checkpoint) {
+    action segRoute_encap(bit<8> checkpoint) {
+        hdr.ethernet.etherType = TYPE_SEGROUTE;
         hdr.segRoute.setValid();
         hdr.segRoute.checkpoint = checkpoint;
         count_tunnelled.count(0);
@@ -113,16 +126,31 @@ control MyIngress(inout headers hdr,
         size = 1024;
     }
 
-    apply {
-        if (hdr.segRoute.isValid()){
-            if (hdr.segRoute.bos == 1){
-                segRoute_finish();
-            }
-            segRoute_port();
+    table encap_routing {
+        key = {
+            hdr.segRoute.checkpoint: exact;
         }
-        if (hdr.ipv4.isValid()){
-            // Count the entering packets
-            count_in.count(0);
+        actions = {
+            segRoute_port;
+        }
+        size = 1024;
+    }
+
+    apply {
+        // Count the entering packets
+        count_in.count(0);
+        
+        bit<8> device_id;
+        device_id_register.read(device_id, 0);
+        if (hdr.segRoute.isValid()){
+            is_tunnelled = true;
+            if (hdr.segRoute.checkpoint == device_id){
+                segRoute_finish();
+                is_tunnelled = false;
+            }
+            encap_routing.apply();
+        }
+        if (hdr.ipv4.isValid() && !is_tunnelled){
 
             if (hdr.ipv4.protocol == TYPE_TCP){
                 meta.dstPort = hdr.tcp.dstPort;
@@ -130,7 +158,8 @@ control MyIngress(inout headers hdr,
             else if (hdr.ipv4.protocol == TYPE_UDP){
                 meta.dstPort = hdr.udp.dstPort;
             }
-            encap_rules.apply();
+            if (!is_tunnelled && !hdr.segRoute.isValid() && hdr.segRoute.checkpoint != device_id)
+                encap_rules.apply();
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {
                     ecmp_group_to_nhop.apply();

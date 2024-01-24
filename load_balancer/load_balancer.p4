@@ -25,38 +25,47 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    register <bit<REGISTER_WIDTH>>(REGISTER_SIZE) loadbalance_seed;
+    counter(1, CounterType.packets) count_in;
 
     action drop() {
         mark_to_drop(standard_metadata);
-    }
-
-    action update_flow_seed(){
-        bit<12> register_index;
-
-        hash(register_index,
-	    HashAlgorithm.crc16,
-	    (bit<1>)0,
-	    { hdr.ipv4.dstAddr,
-	      hdr.ipv4.srcAddr,
-              hdr.tcp.srcPort,
-              hdr.tcp.dstPort,
-              hdr.ipv4.protocol},
-	      (bit<12>)REGISTER_SIZE);
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
 
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
 
-       //set the destination mac address that we got from the match in the table
+        //set the destination mac address that we got from the match in the table
         hdr.ethernet.dstAddr = dstAddr;
 
-        //set the output port that we also get from the table
-        standard_metadata.egress_spec = port;
+        standard_metadata.egress_spec = port;            
 
         //decrease ttl by 1
         hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+    }
+
+    action ecmp_hash(bit <16> num_nhops){
+        hash(meta.ecmp_hash,
+	    HashAlgorithm.crc16,
+	    (bit<1>)0,
+	    { hdr.ipv4.srcAddr,
+	      hdr.ipv4.dstAddr,
+          hdr.tcp.srcPort,
+          hdr.tcp.dstPort,
+          hdr.ipv4.protocol},
+	    num_nhops);
+    }
+
+    table ecmp_nhop {
+        key = {
+            meta.ecmp_hash: exact;
+        }
+        actions = {
+            set_nhop;
+            drop;
+        }
+        size = 1024;
+        default_action = drop;
     }
 
     table port_to_nhop {
@@ -64,16 +73,27 @@ control MyIngress(inout headers hdr,
             standard_metadata.ingress_port: exact;
         }
         actions = {
-            //send_to_out;
             set_nhop;
+            ecmp_hash;
+            drop;
         }   
         size = 1024;
-        //default_action = send_to_out;
+        default_action = drop;
+        meters = {
+            Meter;
+        }
     }
 
     apply {
         //Only forward packets if they are IP and TTL > 1
         if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1){
+
+            count_in.count(0);
+            switch (port_to_nhop.apply().action_run){
+                ecmp_hash: {
+                    ecmp_nhop.apply();
+                }
+            }
         }
     }
 }

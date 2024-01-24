@@ -138,6 +138,32 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
+    action forward_packet(macAddr_t dstAddr)
+    {
+        hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+        hdr.ethernet.dstAddr = dstAddr;
+
+        // Simply forward the packet from one port to the other
+        // If input port is 1 => output port 2
+        if (standard_metadata.ingress_port == 1){
+            standard_metadata.egress_spec = 2;
+        }
+        // If input port is 2 => output port 1
+        else if (standard_metadata.ingress_port == 2){
+            standard_metadata.egress_spec = 1;
+        }
+    }
+
+    table forward {
+        key = {
+            standard_metadata.ingress_port: exact;
+        }
+        actions = {
+            forward_packet;
+        }
+        size = 2;
+    }
+
     table fw {
         key = {
             hdr.ipv4.srcAddr: exact;
@@ -160,18 +186,11 @@ control MyIngress(inout headers hdr,
     apply {
         // Only if IPV4 the rule is applied. Therefore other packets will not be forwarded.
         if (hdr.ipv4.isValid()){
-            // Simply forward the packet from one port to the other
-            // If input port is 1 => output port 2
-            if (standard_metadata.ingress_port == 1){
-                standard_metadata.egress_spec = 2;
-            }
-            // If input port is 2 => output port 1
-            else if (standard_metadata.ingress_port == 2){
-                standard_metadata.egress_spec = 1;
-            }
             
             // Count the entering packets
             count_in.count(0);
+
+            forward.apply();
            
             if (hdr.ipv4.protocol == TYPE_TCP){
                 meta.dstPort = hdr.tcp.dstPort;

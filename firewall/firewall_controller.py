@@ -20,6 +20,24 @@ class FirewallController(cmd2.Cmd):
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'firewall')
+        self.fill_mac_table(sw_name)
+    
+    def fill_mac_table(self, sw_name):
+        for switch in self.topo.get_switches_connected_to(sw_name):
+            switch_mac = self.topo.node_to_node_mac(switch, sw_name)
+            port = self.topo.node_to_node_port_num(sw_name, switch)
+            port = port % 2 + 1 # invert the ports
+            self.controller.table_add("forward", "forward_packet", [str(port)], [str(switch_mac)])
+            print("table_add at {}:".format(sw_name))
+            print("forward forward_packet " + str(switch_mac) + " => " + str(port))
+        
+        for host in self.topo.get_hosts_connected_to(sw_name):
+            host_mac = self.topo.node_to_node_mac(host, sw_name)
+            port = self.topo.node_to_node_port_num(sw_name, host)
+            port = port % 2 + 1 # invert the ports
+            self.controller.table_add("forward", "forward_packet", [str(port)], [str(host_mac)])
+            print("table_add at {}:".format(sw_name))
+            print("forward forward_packet " + str(host_mac) + " => " + str(port))
 
     def see_filters(self):
         nb_entries = self.controller.table_num_entries('fw')

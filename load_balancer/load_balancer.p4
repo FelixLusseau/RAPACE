@@ -79,9 +79,6 @@ control MyIngress(inout headers hdr,
         }   
         size = 1024;
         default_action = drop;
-        meters = {
-            Meter;
-        }
     }
 
     apply {

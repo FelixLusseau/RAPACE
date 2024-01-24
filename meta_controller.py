@@ -136,7 +136,7 @@ class RAPACE_CLI(cmd2.Cmd):
         network['RAPACE']['Controllers'] = {} 
         for switch, controller in network['RAPACE']['Switches'].items():
             path = controller + '/' + controller + '_controller.py'
-            network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
+            network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, text=True)      
             sleep(1)
             if network['RAPACE']['Controllers'][switch + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][switch + 'Controller'].poll() != 0:
                 print(f"The Controller of {switch} has crashed.")

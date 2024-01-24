@@ -1,16 +1,20 @@
 RAPACE:
   Switches:
-    s1: router
-    s2: router
-    s3: router
+    s1: firewall
+    s2: load_balancer
+    s3: firewall
+    s4: firewall
+    s5: load_balancer
+    s6: firewall
   Hosts:
     h1:
     h2:
   Links:
+    - [h1, s1]
     - [s1, s2]
-    # - [s1, s2, 1, 1]
-    # - [s2, s3]
-    - [s3, s1]
-    - [s1, h1]
-    - [s2, h2]
-      
+    - [s2, s3]
+    - [s2, s4]     
+    - [s5, s3] 
+    - [s5, s4]
+    - [s5, s6]
+    - [h2, s6]

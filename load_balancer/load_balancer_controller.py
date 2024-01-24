@@ -12,11 +12,11 @@ from swap import swap
 class LoadBalancerController(cmd2.Cmd):
     prompt = 'Loadbalancer_CLI> '
 
-    def __init__(self, sw_name, port_in):
+    def __init__(self, sw_name):
         super().__init__()
         self.topo = load_topo('topology.json')
         self.sw_name = sw_name
-        self.port_in = int(port_in)
+        self.port_in = 0
         self.packet_rate = 1
         self.host_connected = [] #mac_adress, port source
         self.thrift_port = self.topo.get_thrift_port(sw_name)
@@ -24,18 +24,17 @@ class LoadBalancerController(cmd2.Cmd):
         self.controller = swap(self.sw_name, 'load_balancer')
         self.reset_state()
         self.set_table_defaults()
-        self.update_neighbor()
         
     def reset_state(self):
         self.controller.reset_state()
         self.controller.table_clear("port_to_nhop")
         self.controller.table_clear("ecmp_nhop")
-        self.controller.table_clear("packet_rate_filter")
+        #self.controller.table_clear("packet_rate_filter")
 
     def set_table_defaults(self):
         self.controller.table_set_default("port_to_nhop", "drop", [])
         self.controller.table_set_default("ecmp_nhop","drop",[])
-        self.controller.table_set_default("packet_rate_filter","drop",[])
+        #self.controller.table_set_default("packet_rate_filter","drop",[])
 
     def set_packet_rate(self, rate):
         self.packet_rate = rate
@@ -45,6 +44,9 @@ class LoadBalancerController(cmd2.Cmd):
         for sw in self.topo.get_switches_connected_to(self.sw_name):
             if self.port_in == self.topo.node_to_node_port_num(self.sw_name, sw):
                 return self.topo.node_to_node_mac(sw, self.sw_name)
+        for host in self.topo.get_hosts_connected_to(self.sw_name):
+            if self.port_in == self.topo.node_to_node_port_num(self.sw_name, host):
+                return self.topo.node_to_node_mac(host, self.sw_name)
 
     #return the list of all the "out" port of a load_balancer
     def get_list_port_connected(self):
@@ -57,7 +59,7 @@ class LoadBalancerController(cmd2.Cmd):
 
         return port_list
 
-    def update_neighbor(self):
+    def set_tables(self):
         
         mac_address_port_in = self.get_mac_address_port_in()
 
@@ -95,7 +97,39 @@ class LoadBalancerController(cmd2.Cmd):
                 print(f"Table: ecmp_nhop. Line added: {index_out} ecmp_hash {sw_mac} {port_out[index_out]}\n")
                 index_out = index_out + 1
 
-    def see_load(self,args):
+    def change_port_in_tables(self):
+        mac_address_port_in = self.get_mac_address_port_in()
+
+        #check if we have a port_in existing
+        if mac_address_port_in is None:
+            print(f"No switches facing port_in: {self.port_in}")
+            return 0
+
+        #get the number of port out possibilites
+        num_nhop = len(self.topo.get_switches_connected_to(self.sw_name)) - 1
+        if num_nhop < 0:
+            num_nhop = 0 #just in case to avoid crash if non sense topology happens
+
+        port_out = self.get_list_port_connected()
+        index_out = 0
+
+        for sw in self.topo.get_switches_connected_to(self.sw_name):
+            sw_port = self.topo.node_to_node_port_num(self.sw_name, sw)
+            sw_mac = self.topo.node_to_node_mac(self.sw_name, sw)
+            
+            #If it comes from port_in return 0 for port_out
+            if sw_port == self.port_in:
+                self.controller.table_modify_match("port_to_nhop", "ecmp_hash", [str(sw_port)], [str(num_nhop)])
+                print(f"Table: port_to_nhop. Line modfied: {sw_port} ecmp_hash {num_nhop}\n")
+            #Else send it to port_in
+            else:
+                self.controller.table_modify_match("port_to_nhop", "set_nhop", [str(sw_port)], [str(mac_address_port_in), str(self.port_in)])
+                print(f"Table: port_to_nhop. Line modified: {sw_port} set_nhop {mac_address_port_in} {self.port_in}\n")
+                self.controller.table_modify_match("ecmp_nhop", "set_nhop", [str(index_out)], [str(sw_mac), str(port_out[index_out])])
+                print(f"Table: ecmp_nhop. Line modified: {index_out} ecmp_hash {sw_mac} {port_out[index_out]}\n") 
+
+
+    def see_load(self):
         print("Total counter: ")
         self.controller.counter_read('count_in', 0)
         print("\u200B")
@@ -118,13 +152,36 @@ class LoadBalancerController(cmd2.Cmd):
             self.see_load()
 
     def do_set_pck_rate(self, rate):
-        set_pck_rate(rate)
+        self.packet_rate = int(rate)
+        #update packet_rate
+
+    def do_set_port_in(self, args):
+        #if first time
+        target = args.split()
+        if self.port_in == 0:
+            self.port_in = int(self.topo.node_to_node_port_num(self.sw_name, target[0]))
+            print(f"port_in is {self.port_in}")
+            if(self.port_in is not None):
+                self.set_tables()
+                print("Port_in changed")
+            else:
+                print("Error, bad switch or host given")
+        else:
+            self.port_in = int(self.topo.node_to_node_port_num(self.sw_name, target[0]))
+            if(self.port_in is not None):
+                self.change_port_in_tables()
+                print("Port_in changed")
+            else:
+                print("Error, bad switch or host given")
+
+    
+
 
 
 def matches_regex(string, regex):
     return re.match(regex, string) is not None
 
 if __name__ == '__main__':
-    if matches_regex(sys.argv[1], r's[0-9]+$') and matches_regex(sys.argv[2], r'[0-9]+$'):
-        app = LoadBalancerController(sys.argv[1],sys.argv[2])
+    if matches_regex(sys.argv[1], r's[0-9]+$'):
+        app = LoadBalancerController(sys.argv[1])
         app.cmdloop()

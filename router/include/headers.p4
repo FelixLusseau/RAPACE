@@ -11,6 +11,9 @@ typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
 
+#define IP_ICMP_PROTO 1
+#define ICMP_TTL_EXPIRED 11
+
 header segRoute_t {
     bit<8>    checkpoint;
 }
@@ -35,6 +38,13 @@ header ipv4_t {
     bit<16>   hdrChecksum;
     ip4Addr_t srcAddr;
     ip4Addr_t dstAddr;
+}
+
+header icmp_t {
+   bit<8> type;
+   bit<8> code;
+   bit<16> checksum;
+   bit<32> unused;
 }
 
 header udp_t{
@@ -74,6 +84,8 @@ struct metadata {
 struct headers {
     ethernet_t   ethernet;
     segRoute_t   segRoute;
+    ipv4_t       ipv4_icmp;
+    icmp_t       icmp;
     ipv4_t       ipv4;
     tcp_t        tcp;
     udp_t        udp;

@@ -23,6 +23,7 @@ class RouterController(cmd2.Cmd):
         self.reset_state()
         self.set_table_defaults()
         self.route(self.sw_name)
+        self.set_icmp_ingress_port_table(self.sw_name)
         self.controller.register_write('device_id_register', 0, sw_name[1:])
     
     def reset_state(self):
@@ -36,6 +37,14 @@ class RouterController(cmd2.Cmd):
         self.controller.table_set_default("ipv4_lpm", "drop", [])
         self.controller.table_set_default("ecmp_group_to_nhop", "drop", [])
         self.controller.table_set_default("encap_routing", "drop", [])
+
+    def set_icmp_ingress_port_table(self, sw_name):
+        for intf, node in self.topo.get_interfaces_to_node(sw_name).items():
+            ip = self.topo.node_to_node_interface_ip(sw_name, node).split("/")[0]
+            port_number = self.topo.interface_to_port(sw_name, intf)
+
+            print("table_add at {}:".format(sw_name))
+            self.controller.table_add("icmp_ingress_port", "set_src_icmp_ip", [str(port_number)], [str(ip)])
 
     def route(self, sw_name):
 

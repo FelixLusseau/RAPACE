@@ -79,7 +79,7 @@ control MyIngress(inout headers hdr,
 
     apply {
         // Only if IPV4 the rule is applied. Therefore other packets will not be forwarded.
-        if (hdr.ipv4.isValid()){
+        if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1){
             
             // Count the entering packets
             count_in.count(0);

@@ -136,6 +136,23 @@ control MyIngress(inout headers hdr,
         size = 1024;
     }
 
+    action set_src_icmp_ip (bit<32> src_ip){
+        hdr.ipv4_icmp.srcAddr = src_ip;
+    }
+
+    table icmp_ingress_port {
+        key = {
+            standard_metadata.ingress_port: exact;
+        }
+
+        actions = {
+            set_src_icmp_ip;
+            NoAction;
+        }
+        size=64;
+        default_action=NoAction;
+    }
+
     apply {
         // Count the entering packets
         count_in.count(0);
@@ -151,7 +168,7 @@ control MyIngress(inout headers hdr,
             else
                 encap_routing.apply();
         }
-        if (hdr.ipv4.isValid() && !is_tunnelled){
+        if (hdr.ipv4.isValid() && hdr.ipv4.ttl > 1 && !is_tunnelled){
 
             if (hdr.ipv4.protocol == TYPE_TCP){
                 meta.dstPort = hdr.tcp.dstPort;
@@ -165,6 +182,43 @@ control MyIngress(inout headers hdr,
                     ecmp_group_to_nhop.apply();
                 }
             }
+        }
+        //Traceroute Logic (only for TCP probes)
+        else if (hdr.ipv4.isValid() && !is_tunnelled && hdr.tcp.isValid() && hdr.ipv4.ttl == 1){
+
+            // Set new headers valid
+            hdr.ipv4_icmp.setValid();
+            hdr.icmp.setValid();
+
+            // Set egress port == ingress port
+            standard_metadata.egress_spec = standard_metadata.ingress_port;
+
+            //Ethernet: Swap map addresses
+            bit<48> tmp_mac = hdr.ethernet.srcAddr;
+            hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
+            hdr.ethernet.dstAddr = tmp_mac;
+
+            //Building new Ipv4 header for the ICMP packet
+            //Copy original header (for simplicity)
+            hdr.ipv4_icmp = hdr.ipv4;
+            //Set destination address as traceroute originator
+            hdr.ipv4_icmp.dstAddr = hdr.ipv4.srcAddr;
+            //Set src IP to the IP assigned to the switch interface
+            icmp_ingress_port.apply();
+
+            //Set protocol to ICMP
+            hdr.ipv4_icmp.protocol = IP_ICMP_PROTO;
+            //Set default TTL
+            hdr.ipv4_icmp.ttl = 64;
+            //And IP Length to 56 bytes (normal IP header + ICMP + 8 bytes of data)
+            hdr.ipv4_icmp.totalLen= 56;
+
+            //Create ICMP header with
+            hdr.icmp.type = ICMP_TTL_EXPIRED;
+            hdr.icmp.code = 0;
+
+            //make sure all the packets are length 70.. so wireshark does not complain when tpc options,etc
+            truncate((bit<32>)70);
         }
     }
 }
@@ -203,6 +257,48 @@ control MyComputeChecksum(inout headers hdr, inout metadata meta) {
               hdr.ipv4.dstAddr },
               hdr.ipv4.hdrChecksum,
               HashAlgorithm.csum16);
+
+    update_checksum(
+    hdr.ipv4_icmp.isValid(),
+        { hdr.ipv4_icmp.version,
+          hdr.ipv4_icmp.ihl,
+          hdr.ipv4_icmp.dscp,
+          hdr.ipv4_icmp.ecn,
+          hdr.ipv4_icmp.totalLen,
+          hdr.ipv4_icmp.identification,
+          hdr.ipv4_icmp.flags,
+          hdr.ipv4_icmp.fragOffset,
+          hdr.ipv4_icmp.ttl,
+          hdr.ipv4_icmp.protocol,
+          hdr.ipv4_icmp.srcAddr,
+          hdr.ipv4_icmp.dstAddr },
+          hdr.ipv4_icmp.hdrChecksum,
+          HashAlgorithm.csum16);
+
+    update_checksum(
+    hdr.icmp.isValid(),
+        { hdr.icmp.type,
+          hdr.icmp.code,
+          hdr.icmp.unused,
+          hdr.ipv4.version,
+	      hdr.ipv4.ihl,
+          hdr.ipv4.dscp,
+          hdr.ipv4.ecn,
+          hdr.ipv4.totalLen,
+          hdr.ipv4.identification,
+          hdr.ipv4.flags,
+          hdr.ipv4.fragOffset,
+          hdr.ipv4.ttl,
+          hdr.ipv4.protocol,
+          hdr.ipv4.hdrChecksum,
+          hdr.ipv4.srcAddr,
+          hdr.ipv4.dstAddr,
+          hdr.tcp.srcPort,
+          hdr.tcp.dstPort,
+          hdr.tcp.seqNo
+          },
+          hdr.icmp.checksum,
+          HashAlgorithm.csum16);
     }
 }
 

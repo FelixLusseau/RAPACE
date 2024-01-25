@@ -54,7 +54,7 @@ class RouterController(cmd2.Cmd):
                 # print("ipv4_lpm set_nhop " + str(loopback_ip) + " => " + str(dst_sw_mac) + " " + str(sw_port))
                 self.controller.table_add("ipv4_lpm", "set_nhop", [str(loopback_ip)],
                                         [str(dst_sw_mac), str(sw_port)])
-                print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_sw_mac) + " " + str(sw_port))
+                # print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_sw_mac) + " " + str(sw_port))
                 self.controller.table_add("encap_routing", "segRoute_port", str(sw_dst[1:]), [str(dst_sw_mac), str(sw_port)])
 
             elif len(paths) > 1:
@@ -69,8 +69,8 @@ class RouterController(cmd2.Cmd):
                     # print("ipv4_lpm set_nhop " + str(loopback_ip) + " => " + str(dst_mac) + " " + str(sw_port))
                     self.controller.table_add("ipv4_lpm", "set_nhop", [str(loopback_ip)],
                                             [str(dst_mac), str(sw_port)])
-                    print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_sw_mac) + " " + str(sw_port))
-                    self.controller.table_add("encap_routing", "segRoute_port", str(sw_dst[1:]), [str(dst_sw_mac), str(sw_port)])
+                    # print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_mac) + " " + str(sw_port))
+                    self.controller.table_add("encap_routing", "segRoute_port", str(sw_dst[1:]), [str(dst_mac), str(sw_port)])
 
         for sw_dst in self.topo.get_p4switches():
 
@@ -118,6 +118,7 @@ class RouterController(cmd2.Cmd):
                             if switch_ecmp_groups[sw_name].get(tuple(dst_macs_ports), None):
                                 ecmp_group_id = switch_ecmp_groups[sw_name].get(tuple(dst_macs_ports), None)
                                 print("table_add at {}:".format(sw_name))
+                                print("ipv4_lpm ecmp_group " + str(host_ip) + " => " + str(ecmp_group_id) + " " + str(len(dst_macs_ports)))
                                 self.controller.table_add("ipv4_lpm", "ecmp_group", [str(host_ip)],
                                                                     [str(ecmp_group_id), str(len(dst_macs_ports))])
 
@@ -135,6 +136,7 @@ class RouterController(cmd2.Cmd):
 
                                 #add forwarding rule
                                 print("table_add at {}:".format(sw_name))
+                                print("ipv4_lpm ecmp_group " + str(host_ip) + " => " + str(new_ecmp_group_id) + " " + str(len(dst_macs_ports)))
                                 self.controller.table_add("ipv4_lpm", "ecmp_group", [str(host_ip)],
                                                                     [str(new_ecmp_group_id), str(len(dst_macs_ports))])
 

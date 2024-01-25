@@ -20,6 +20,20 @@ def send_command_to_controller(controller, command):
             break
         print(response, end='')
 
+def add_loopbacks():
+    # Add loopback addresses to the topology
+    with open('topology.json', 'r') as f:
+        data = json.load(f)
+
+    network['RAPACE']['RoutersLoopback'] = {}
+    for node in data['nodes']:
+        if node['id'][0] == 's' and network['RAPACE']['Switches'][node['id']] == 'router':
+            node['loopback'] = '10.100.0.' + node['id'][1:] + '/32'
+            network['RAPACE']['RoutersLoopback'][node['id']] = node['loopback']
+
+    with open('topology.json', 'w') as f:
+        json.dump(data, f, indent=4)
+
 def swap(node_id, equipment, *args):
     """Swap the equipment of a node or add one"""
     switch = node_id if node_id.startswith('s') else 's' + node_id
@@ -149,18 +163,7 @@ class RAPACE_CLI(cmd2.Cmd):
         global mininet
         mininet = runMininet()
 
-        # Add loopback addresses to the topology
-        with open('topology.json', 'r') as f:
-            data = json.load(f)
-
-        network['RAPACE']['RoutersLoopback'] = {}
-        for node in data['nodes']:
-            if node['id'][0] == 's' and network['RAPACE']['Switches'][node['id']] == 'router':
-                node['loopback'] = '10.100.0.' + node['id'][1:] + '/32'
-                network['RAPACE']['RoutersLoopback'][node['id']] = node['loopback']
-
-        with open('topology.json', 'w') as f:
-            json.dump(data, f, indent=4)
+        add_loopbacks()
 
         print("\nInitial topology : ")
         see_topology()

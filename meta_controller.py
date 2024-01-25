@@ -5,8 +5,8 @@ from generate_network import generate_network
 import ast
 import json
 import pprint
-# import networkx as nx
-# import matplotlib.pyplot as plt
+import networkx as nx
+import matplotlib.pyplot as plt
 
 def send_command_to_controller(controller, command):
     """Send a command to the controller and print the response"""
@@ -37,7 +37,8 @@ def add_loopbacks():
 def routes_reload():
     print("Reloading routes...")
     for switch, controller in network['RAPACE']['Controllers'].items():
-        send_command_to_controller(controller, 'routes_reload')
+        controller.stdin.write('routes_reload' + '\n')
+        controller.stdin.flush()
 
 def swap(node_id, equipment, *args):
     """Swap the equipment of a node or add one"""
@@ -68,22 +69,23 @@ def see_topology():
     # print(topo)
     pprint.pprint(topo)
 
-    # G = nx.Graph()
+    G = nx.Graph()
 
-    # # Ajoutez les switches et les hôtes comme nœuds
-    # for node in network['RAPACE']['Switches']:
-    #     G.add_node(node)
-    # for node in network['RAPACE']['Hosts']:
-    #     G.add_node(node)
+    # Ajoutez les switches et les hôtes comme nœuds
+    for node in network['RAPACE']['Switches']:
+        G.add_node(node)
+    for node in network['RAPACE']['Hosts']:
+        G.add_node(node)
 
-    # # Ajoutez les liens comme arêtes
-    # for link in network['RAPACE']['Links']:
-    #     # Supprimez les poids des liens pour la visualisation
-    #     link = [node for node in link if not node.startswith('weight=')]
-    #     G.add_edge(*link)
+    # Ajoutez les liens comme arêtes
+    for link in network['RAPACE']['Links']:
+        # Supprimez les poids des liens pour la visualisation
+        link = [node for node in link if not node.startswith('weight=')]
+        G.add_edge(*link)
     
-    # nx.draw(G, with_labels=True)
+    nx.draw(G, with_labels=True)
     # plt.show()
+    plt.savefig('network.png')
 
 def change_weight(link, weight):
     if isinstance(link, str):

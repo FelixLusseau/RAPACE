@@ -105,7 +105,7 @@ class RouterController(cmd2.Cmd):
                         if len(paths) == 1:
                             next_hop = paths[0][1]
 
-                            host_ip = self.topo.get_host_ip(host) + "/32" #"/24"
+                            host_ip = self.topo.get_host_ip(host) + "/24"
                             sw_port = self.topo.node_to_node_port_num(sw_name, next_hop)
                             dst_sw_mac = self.topo.node_to_node_mac(next_hop, sw_name)
 
@@ -120,7 +120,7 @@ class RouterController(cmd2.Cmd):
                             dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
                                                 self.topo.node_to_node_port_num(sw_name, next_hop))
                                                 for next_hop in next_hops]
-                            host_ip = self.topo.get_host_ip(host) + "/32" #"/24"
+                            host_ip = self.topo.get_host_ip(host) + "/24"
 
                             #check if the ecmp group already exists. The ecmp group is defined by the number of next
                             #ports used, thus we can use dst_macs_ports as key

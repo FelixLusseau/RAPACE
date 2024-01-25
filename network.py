@@ -24,7 +24,7 @@ def runMininet():
 	net.addLink('s4', 'h2')
 
 	# Assignment strategy
-	net.l2()
+	net.l3()
 
 	# Nodes general options
 	net.enablePcapDumpAll()

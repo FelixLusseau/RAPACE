@@ -26,7 +26,7 @@ def generate_network():
             file.write('\tnet.addLink(' + args + ')\n')
         file.write('\n')
         file.write('\t# Assignment strategy\n')
-        file.write('\tnet.l2()\n\n')
+        file.write('\tnet.l3()\n\n')
         file.write('\t# Nodes general options\n')
         file.write('\tnet.enablePcapDumpAll()\n')
         file.write('\tnet.enableLogAll()\n\n')

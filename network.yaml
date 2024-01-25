@@ -1,9 +1,9 @@
 RAPACE:
   Switches:
-    s0: firewall
+    s0: router
     s1: router
-    s2: router_lw
-    s3: router_lw
+    s2: firewall
+    s3: router
     s4: router
   Hosts:
     h1:

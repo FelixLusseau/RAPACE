@@ -4,15 +4,15 @@ def generate_network():
     with open('network.yaml', 'r') as file:
         topology = yaml.safe_load(file)
 
-    print("Initial topology : ")
-    print(topology)
+    # print("Initial topology : ")
+    # print(topology)
 
     with open('network.py', 'w') as file:
         file.write('from p4utils.mininetlib.network_API import NetworkAPI\n\n')
         file.write('def runMininet():\n')
         file.write('\tnet = NetworkAPI()\n\n')
         file.write('\t# Network general options\n')
-        file.write('\tnet.setLogLevel("debug")\n')
+        # file.write('\tnet.setLogLevel("debug")\n')
         file.write('\tnet.disableCli()\n\n')
         file.write('\t# Network definition\n')
         for switch, value in topology['RAPACE']['Switches'].items():

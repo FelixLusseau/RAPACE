@@ -4,6 +4,7 @@ import cmd2
 from generate_network import generate_network
 import ast
 import json
+import pprint
 # import networkx as nx
 # import matplotlib.pyplot as plt
 
@@ -44,7 +45,8 @@ def see_topology():
     topo = network['RAPACE'].copy()
     if 'Controllers' in topo:
         del topo['Controllers']
-    print(topo)
+    # print(topo)
+    pprint.pprint(topo)
 
     # G = nx.Graph()
 
@@ -138,17 +140,24 @@ class RAPACE_CLI(cmd2.Cmd):
         with open('topology.json', 'r') as f:
             data = json.load(f)
 
+        network['RAPACE']['RoutersLoopback'] = {}
         for node in data['nodes']:
-            node['loopback'] = '10.100.0.' + node['id'][1:] + '/32'
+            if node['id'][0] == 's' and network['RAPACE']['Switches'][node['id']] == 'router':
+                node['loopback'] = '10.100.0.' + node['id'][1:] + '/32'
+                network['RAPACE']['RoutersLoopback'][node['id']] = node['loopback']
 
         with open('topology.json', 'w') as f:
             json.dump(data, f, indent=4)
+
+        print("\nInitial topology : ")
+        see_topology()
+        print("\n")
 
         print("Starting network...")
         network['RAPACE']['Controllers'] = {} 
         for switch, controller in network['RAPACE']['Switches'].items():
             path = controller + '/' + controller + '_controller.py'
-            network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, text=True)      
+            network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
             sleep(1)
             if network['RAPACE']['Controllers'][switch + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][switch + 'Controller'].poll() != 0:
                 print(f"The Controller of {switch} has crashed.")

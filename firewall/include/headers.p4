@@ -1,4 +1,5 @@
 const bit<16> TYPE_IPV4 = 0x800;
+const bit<16> TYPE_SEGROUTE = 0x1234;
 const bit<8>  TYPE_TCP  = 6;
 const bit<8>  TYPE_UDP  = 17;
 
@@ -14,6 +15,10 @@ header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
+}
+
+header segRoute_t {
+    bit<8>    checkpoint;
 }
 
 header ipv4_t {
@@ -65,6 +70,7 @@ struct metadata {
 
 struct headers {
     ethernet_t   ethernet;
+    segRoute_t   segRoute;
     ipv4_t       ipv4;
     tcp_t        tcp;
     udp_t        udp;

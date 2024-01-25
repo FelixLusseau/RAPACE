@@ -118,11 +118,17 @@ def set_rate_lb(rate):
             if controller == 'load_balancer':
                 send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_rate_lb ' + rate)
 
-def add_encap_node(flow, node_id):
-    switch = node_id if node_id.startswith('s') else 's' + node_id
+def add_encap_node(node_src, flow, node_dst):
+    switch = node_dst if node_dst.startswith('s') else 's' + node_dst
     for switch, controller in network['RAPACE']['Switches'].items():
-        if controller == 'router':
-            send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_encap_node ' + flow + ' ' + node_id)
+        if switch == node_src and controller == 'router' and network['RAPACE']['Switches'][node_dst] == 'router':
+            send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_encap_node ' + flow + ' ' + node_dst)
+        elif switch == node_src and controller != 'router':
+            print("The source node must be a router.")
+            return
+        elif network['RAPACE']['Switches'][node_dst] != 'router':
+            print("The destination node must be a router.")
+            return
 
 class RAPACE_CLI(cmd2.Cmd):
     prompt = '\033[32mRAPACE_CLI> \033[0m'
@@ -246,13 +252,14 @@ class RAPACE_CLI(cmd2.Cmd):
         set_rate_lb(args.pkts_s)
 
     add_encap_node_argparser = cmd2.Cmd2ArgumentParser()
+    add_encap_node_argparser.add_argument('node_src', help="The name of the source node")
     add_encap_node_argparser.add_argument('flow', nargs=4, help="The flow to encapsulate")
-    add_encap_node_argparser.add_argument('node_id', help="The name of the node")
+    add_encap_node_argparser.add_argument('node_dst', help="The name of the destination node")
     @cmd2.with_argparser(add_encap_node_argparser)
     def do_add_encap_node(self, args):
-        """<flow> <node_id> - Add an encapsulation node"""
+        """<node_src> <flow> <node_dst> - Add an encapsulation node"""
         flow = ' '.join(args.flow)
-        add_encap_node(flow, args.node_id)
+        add_encap_node(args.node_src, flow, args.node_dst)
         
 
 # Main function

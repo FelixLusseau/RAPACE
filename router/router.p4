@@ -154,6 +154,7 @@ control MyIngress(inout headers hdr,
     }
 
     apply {
+        // log_msg("TTL = {}", {hdr.ipv4.ttl});
         // Count the entering packets
         count_in.count(0);
         

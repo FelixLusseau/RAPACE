@@ -19,7 +19,7 @@ class RouterlwController(cmd2.Cmd):
         self.sw_name = sw_name
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
-        self.controller = swap(self.sw_name, 'router')
+        self.controller = swap(self.sw_name, 'router_lw')
         self.reset_state()
         self.set_table_defaults()
         self.route(self.sw_name)

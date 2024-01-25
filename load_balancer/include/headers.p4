@@ -4,8 +4,9 @@
 
 const bit<16> TYPE_IPV4 = 0x800;
 
-const bit<4>  TYPE_EGRESS_HOST = 1;
-const bit<4>  TYPE_EGRESS_SWITCH = 2;
+const bit<16> TYPE_SEGROUTE = 0x1234;
+const bit<8>  TYPE_TCP  = 6;
+const bit<8>  TYPE_UDP  = 17;
 
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;
@@ -15,6 +16,10 @@ header ethernet_t {
     macAddr_t dstAddr;
     macAddr_t srcAddr;
     bit<16>   etherType;
+}
+
+header segRoute_t {
+    bit<8>    checkpoint;
 }
 
 header ipv4_t {
@@ -52,6 +57,13 @@ header tcp_t{
     bit<16> urgentPtr;
 }
 
+header udp_t{
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<16> length;
+    bit<16> checksum;
+}
+
 struct metadata {
     bit<14> ecmp_hash;
     bit<32> meter_tag;
@@ -59,6 +71,8 @@ struct metadata {
 
 struct headers {
     ethernet_t   ethernet;
+    segRoute_t   segRoute;
     ipv4_t       ipv4;
     tcp_t        tcp;
+    udp_t        udp;
 }

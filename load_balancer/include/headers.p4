@@ -4,8 +4,9 @@
 
 const bit<16> TYPE_IPV4 = 0x800;
 
-const bit<4>  TYPE_EGRESS_HOST = 1;
-const bit<4>  TYPE_EGRESS_SWITCH = 2;
+const bit<16> TYPE_SEGROUTE = 0x1234;
+const bit<8>  TYPE_TCP  = 6;
+const bit<8>  TYPE_UDP  = 17;
 
 typedef bit<9>  egressSpec_t;
 typedef bit<48> macAddr_t;

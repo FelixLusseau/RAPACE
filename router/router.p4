@@ -117,8 +117,8 @@ control MyIngress(inout headers hdr,
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
             // meta.srcPort: exact;
-            meta.dstPort: exact;
-            hdr.ipv4.protocol: exact;
+            // meta.dstPort: exact;
+            // hdr.ipv4.protocol: exact;
         }
         actions = {
             segRoute_encap;
@@ -148,7 +148,8 @@ control MyIngress(inout headers hdr,
                 segRoute_finish();
                 is_tunnelled = false;
             }
-            encap_routing.apply();
+            else
+                encap_routing.apply();
         }
         if (hdr.ipv4.isValid() && !is_tunnelled){
 
@@ -158,8 +159,7 @@ control MyIngress(inout headers hdr,
             else if (hdr.ipv4.protocol == TYPE_UDP){
                 meta.dstPort = hdr.udp.dstPort;
             }
-            if (!is_tunnelled && !hdr.segRoute.isValid() && hdr.segRoute.checkpoint != device_id)
-                encap_rules.apply();
+            encap_rules.apply();
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {
                     ecmp_group_to_nhop.apply();

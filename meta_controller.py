@@ -140,10 +140,13 @@ def set_port_in(lb_id, port_in):
                 send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_port_in ' + port_in)
 
 def add_encap_node(node_src, flow, node_dst):
-    switch = node_dst if node_dst.startswith('s') else 's' + node_dst
+    node_src = node_src if node_src.startswith('s') else 's' + node_src
+    node_dst = node_dst if node_dst.startswith('s') else 's' + node_dst
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch == node_src and controller == 'router' and network['RAPACE']['Switches'][node_dst] == 'router':
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_encap_node ' + flow + ' ' + node_dst)
+            reversed_flow = ' '.join(reversed(flow.split()))
+            send_command_to_controller(network['RAPACE']['Controllers'][node_dst + 'Controller'], 'add_encap_node ' + reversed_flow + ' ' + node_src)
         elif switch == node_src and controller != 'router':
             print("The source node must be a router.")
             return
@@ -270,7 +273,7 @@ class RAPACE_CLI(cmd2.Cmd):
 
     add_encap_node_argparser = cmd2.Cmd2ArgumentParser()
     add_encap_node_argparser.add_argument('node_src', help="The name of the source node")
-    add_encap_node_argparser.add_argument('flow', nargs=4, help="The flow to encapsulate")
+    add_encap_node_argparser.add_argument('flow', nargs=2, help="The flow to encapsulate")
     add_encap_node_argparser.add_argument('node_dst', help="The name of the destination node")
     @cmd2.with_argparser(add_encap_node_argparser)
     def do_add_encap_node(self, args):

@@ -151,9 +151,9 @@ class RouterController(cmd2.Cmd):
         self.controller.counter_read('count_tunnelled', 0)
         print("\u200B")
 
-    def add_encap_node(self, flow, node_id):
-        self.controller.table_add("encap_rules", "segRoute_encap", flow, node_id[1])
-        print("Rule : segRoute_encap " + str(flow) + " to " + node_id + " added")
+    def add_encap_node(self, flow, sw_dst):
+        self.controller.table_add("encap_rules", "segRoute_encap", flow, sw_dst[1:])
+        print("Rule : segRoute_encap " + str(flow) + " to " + sw_dst + " added")
         print("\u200B")
     
     # cmd2 methods
@@ -165,8 +165,8 @@ class RouterController(cmd2.Cmd):
     
     def do_add_encap_node(self, args):
         flow = [f for f in args.split(" ")]
-        node_id = flow.pop()
-        self.add_encap_node(flow, node_id)
+        sw_dst = flow.pop()
+        self.add_encap_node(flow, sw_dst)
 
 def matches_regex(string, regex):
     return re.match(regex, string) is not None

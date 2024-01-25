@@ -118,6 +118,13 @@ def set_rate_lb(rate):
             if controller == 'load_balancer':
                 send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_rate_lb ' + rate)
 
+def set_port_in(lb_id, port_in):
+    lb_id = lb_id if lb_id.startswith('s') else 's' + lb_id
+    port_in = port_in if port_in.startswith('s') else 's' + port_in
+    for switch, controller in network['RAPACE']['Switches'].items():
+            if controller == 'load_balancer' and switch == lb_id:
+                send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_port_in ' + port_in)
+
 def add_encap_node(node_src, flow, node_dst):
     switch = node_dst if node_dst.startswith('s') else 's' + node_dst
     for switch, controller in network['RAPACE']['Switches'].items():
@@ -250,6 +257,13 @@ class RAPACE_CLI(cmd2.Cmd):
     def do_set_rate_lb(self, args):
         """<pkts/s> - Set the rate of the loadbalancer"""
         set_rate_lb(args.pkts_s)
+
+    set_port_in_argparser = cmd2.Cmd2ArgumentParser()
+    set_port_in_argparser.add_argument('lb_id', help="The name of the loadbalancer")
+    set_port_in_argparser.add_argument('port_in', help="The new port_in of the loadbalancer")
+    def do_set_port_in(self, args):
+        """<lb_id> <port_in> - Set the port_in of the loadbalancer"""
+        set_port_in(args.lb_id, args.port_in)
 
     add_encap_node_argparser = cmd2.Cmd2ArgumentParser()
     add_encap_node_argparser.add_argument('node_src', help="The name of the source node")

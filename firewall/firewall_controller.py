@@ -20,7 +20,17 @@ class FirewallController(cmd2.Cmd):
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'firewall')
+        self.reset_state()
+        self.set_table_defaults()
         self.fill_mac_table(sw_name)
+
+    def reset_state(self):
+        self.controller.reset_state()
+        self.controller.table_clear("fw")
+        self.controller.table_clear("forward")
+
+    def set_table_defaults(self):
+        self.controller.table_set_default("forward", "drop", [])
     
     def fill_mac_table(self, sw_name):
         for switch in self.topo.get_switches_connected_to(sw_name):
@@ -45,7 +55,6 @@ class FirewallController(cmd2.Cmd):
             print("No rule")
             print("\u200B")
             return
-        # print(str(self.controller.table_dump('fw')))
         for i in range(0,nb_entries):
             print("\nRule " + str(i) + " : ")
             print(str(self.controller.table_dump_entry('fw', i)))
@@ -71,6 +80,11 @@ class FirewallController(cmd2.Cmd):
 
     def do_add_fw_rule(self, args):
         self.add_fw_rule(args.split())
+
+    def do_routes_reload(self, args):
+        self.controller.table_clear("forward")
+        self.controller.table_set_default("forward", "drop", [])
+        self.fill_mac_table(self.sw_name)
 
 
 def matches_regex(string, regex):

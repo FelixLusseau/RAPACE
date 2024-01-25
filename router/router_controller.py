@@ -20,13 +20,22 @@ class RouterController(cmd2.Cmd):
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'router')
+        self.reset_state()
         self.set_table_defaults()
         self.route(self.sw_name)
         self.controller.register_write('device_id_register', 0, sw_name[1:])
+    
+    def reset_state(self):
+        self.controller.reset_state()
+        self.controller.table_clear("ipv4_lpm")
+        self.controller.table_clear("ecmp_group_to_nhop")
+        self.controller.table_clear("encap_routing")
+        self.controller.table_clear("encap_rules")
 
     def set_table_defaults(self):
         self.controller.table_set_default("ipv4_lpm", "drop", [])
         self.controller.table_set_default("ecmp_group_to_nhop", "drop", [])
+        self.controller.table_set_default("encap_routing", "drop", [])
 
     def route(self, sw_name):
 
@@ -167,6 +176,16 @@ class RouterController(cmd2.Cmd):
         flow = [f for f in args.split(" ")]
         sw_dst = flow.pop()
         self.add_encap_node(flow, sw_dst)
+
+    def do_routes_reload(self, args):
+        self.controller.table_clear("ipv4_lpm")
+        self.controller.table_clear("ecmp_group_to_nhop")
+        self.controller.table_clear("encap_routing")
+        self.controller.table_clear("encap_rules")
+        self.controller.table_set_default("ipv4_lpm", "drop", [])
+        self.controller.table_set_default("ecmp_group_to_nhop", "drop", [])
+        self.controller.table_set_default("encap_routing", "drop", [])
+        self.route(self.sw_name)
 
 def matches_regex(string, regex):
     return re.match(regex, string) is not None

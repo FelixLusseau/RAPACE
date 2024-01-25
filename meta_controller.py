@@ -34,6 +34,11 @@ def add_loopbacks():
     with open('topology.json', 'w') as f:
         json.dump(data, f, indent=4)
 
+def routes_reload():
+    print("Reloading routes...")
+    for switch, controller in network['RAPACE']['Controllers'].items():
+        send_command_to_controller(controller, 'routes_reload')
+
 def swap(node_id, equipment, *args):
     """Swap the equipment of a node or add one"""
     switch = node_id if node_id.startswith('s') else 's' + node_id
@@ -53,6 +58,7 @@ def swap(node_id, equipment, *args):
     path = equipment + '/' + equipment + '_controller.py'
     network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  
     print("The equipment of " + switch + " has been changed to " + equipment + ".")    
+    routes_reload()
             
 
 def see_topology():
@@ -85,14 +91,15 @@ def change_weight(link, weight):
     mininet.updateLink(*link, weight=weight)
     network['RAPACE']['Links'][network['RAPACE']['Links'].index(link)].append("weight = " + weight)
     print("Weight of " + str(link) + " changed to " + weight + ".")
-    # TODO: update the shortest paths
+    routes_reload()
 
 def remove_link(link):
     if isinstance(link, str):
         link = ast.literal_eval(link)
     mininet.deleteLink(*link)
     network['RAPACE']['Links'].remove(link)
-    print("Link " + str(link) + " removed.")    
+    print("Link " + str(link) + " removed.")
+    routes_reload()
 
 def add_link(link):
     if isinstance(link, str):
@@ -100,6 +107,7 @@ def add_link(link):
     mininet.addLink(*link)
     network['RAPACE']['Links'].append(link)
     print("Link " + str(link) + " added.")
+    routes_reload()
 
 def see_filters():
     for switch, controller in network['RAPACE']['Switches'].items():

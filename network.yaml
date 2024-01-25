@@ -1,5 +1,6 @@
 RAPACE:
   Switches:
+    s0: firewall
     s1: router
     s2: router_lw
     s3: router_lw
@@ -8,7 +9,8 @@ RAPACE:
     h1:
     h2:
   Links:
-    - [h1, s1]
+    - [h1, s0]
+    - [s0, s1]
     - [s1, s2]
     - [s2, s3]
     - [s3, s4]

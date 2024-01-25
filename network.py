@@ -7,6 +7,7 @@ def runMininet():
 	net.disableCli()
 
 	# Network definition
+	net.addP4Switch('s0')
 	net.addP4Switch('s1')
 	net.addP4Switch('s2')
 	net.addP4Switch('s3')
@@ -15,7 +16,8 @@ def runMininet():
 	net.addHost('h1')
 	net.addHost('h2')
 
-	net.addLink('h1', 's1')
+	net.addLink('h1', 's0')
+	net.addLink('s0', 's1')
 	net.addLink('s1', 's2')
 	net.addLink('s2', 's3')
 	net.addLink('s3', 's4')

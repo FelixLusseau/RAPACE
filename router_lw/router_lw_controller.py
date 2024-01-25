@@ -20,12 +20,16 @@ class RouterlwController(cmd2.Cmd):
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'router')
-        # self.set_table_defaults()
+        self.reset_state()
+        self.set_table_defaults()
         self.route(self.sw_name)
 
-    # def set_table_defaults(self):
-    #     self.controller.table_set_default("ipv4_lpm", "drop", [])
-    #     self.controller.table_set_default("ecmp_group_to_nhop", "drop", [])
+    def reset_state(self):
+        self.controller.reset_state()
+        self.controller.table_clear("encap_routing")
+
+    def set_table_defaults(self):
+        self.controller.table_set_default("encap_routing", "drop", [])
 
     def route(self, sw_name):
 
@@ -74,6 +78,11 @@ class RouterlwController(cmd2.Cmd):
     def do_see(self, args):
         if args == 'load':
             self.see_load()
+
+    def do_routes_reload(self, args):
+        self.controller.table_clear("encap_routing")
+        self.controller.table_set_default("encap_routing", "drop", [])
+        self.route(self.sw_name)
     
 
 def matches_regex(string, regex):

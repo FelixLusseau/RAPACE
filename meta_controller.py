@@ -198,7 +198,7 @@ class RAPACE_CLI(cmd2.Cmd):
     # cmd2 methods -> create the commands we want
     swap_argparser = cmd2.Cmd2ArgumentParser()
     swap_argparser.add_argument('node_id', help="The name of the node")
-    swap_argparser.add_argument('equipment', choices=['firewall', 'router', 'load_balancer'], help="The new equipment of the node")
+    swap_argparser.add_argument('equipment', choices=['firewall', 'router', 'router_lw', 'load_balancer'], help="The new equipment of the node")
     swap_argparser.add_argument('args', nargs='*')
     @cmd2.with_argparser(swap_argparser)
     def do_swap(self, args):
@@ -273,7 +273,7 @@ class RAPACE_CLI(cmd2.Cmd):
 
     add_encap_node_argparser = cmd2.Cmd2ArgumentParser()
     add_encap_node_argparser.add_argument('node_src', help="The name of the source node")
-    add_encap_node_argparser.add_argument('flow', nargs=2, help="The flow to encapsulate")
+    add_encap_node_argparser.add_argument('flow', nargs=2, help="The flow to encapsulate of the form 'src_ip dst_ip'")
     add_encap_node_argparser.add_argument('node_dst', help="The name of the destination node")
     @cmd2.with_argparser(add_encap_node_argparser)
     def do_add_encap_node(self, args):

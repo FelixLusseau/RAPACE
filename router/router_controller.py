@@ -108,7 +108,7 @@ class RouterController(cmd2.Cmd):
             else:
                 if self.topo.get_hosts_connected_to(sw_dst):
                     paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
-                    # print("paths hosts from {} to {} : {}".format(sw_name, sw_dst, paths))
+                    print("paths hosts from {} to {} with len {} : {}".format(sw_name, sw_dst, len(paths), paths))
                     for host in self.topo.get_hosts_connected_to(sw_dst):
 
                         if len(paths) == 1:
@@ -120,9 +120,17 @@ class RouterController(cmd2.Cmd):
 
                             #add rule
                             print("table_add at {}:".format(sw_name))
+                            if self.topo.get_nodes()[next_hop].get('device') == 'router_lw':
+                                print("table_add at {}:".format(sw_name))
+                                i = 2
+                                while self.topo.get_nodes()[paths[0][i] ].get('device') == 'router_lw':
+                                    i += 1
+                                checkpoint = paths[0][i]
+                                print("encap_lw segRoute_encap" + str(host_ip) + " => " + str(checkpoint[1:]))
+                                self.controller.table_add("encap_lw", "segRoute_encap", [str(host_ip)], [checkpoint[1:]])
+                            #else:
                             # print("ipv4_lpm set_nhop " + str(host_ip) + " => " + str(dst_sw_mac) + " " + str(sw_port))
-                            self.controller.table_add("ipv4_lpm", "set_nhop", [str(host_ip)],
-                                                                [str(dst_sw_mac), str(sw_port)])
+                            self.controller.table_add("ipv4_lpm", "set_nhop", [str(host_ip)], [str(dst_sw_mac), str(sw_port)])
 
                         elif len(paths) > 1:
                             next_hops = [x[1] for x in paths]
@@ -137,8 +145,7 @@ class RouterController(cmd2.Cmd):
                                 ecmp_group_id = switch_ecmp_groups[sw_name].get(tuple(dst_macs_ports), None)
                                 print("table_add at {}:".format(sw_name))
                                 print("ipv4_lpm ecmp_group " + str(host_ip) + " => " + str(ecmp_group_id) + " " + str(len(dst_macs_ports)))
-                                self.controller.table_add("ipv4_lpm", "ecmp_group", [str(host_ip)],
-                                                                    [str(ecmp_group_id), str(len(dst_macs_ports))])
+                                self.controller.table_add("ipv4_lpm", "ecmp_group", [str(host_ip)], [str(ecmp_group_id), str(len(dst_macs_ports))])
 
                             #new ecmp group for this switch
                             else:

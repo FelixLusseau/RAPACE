@@ -27,9 +27,11 @@ def add_loopbacks():
 
     network['RAPACE']['RoutersLoopback'] = {}
     for node in data['nodes']:
-        if node['id'][0] == 's' and network['RAPACE']['Switches'][node['id']] == 'router':
-            node['loopback'] = '10.100.0.' + node['id'][1:] + '/32'
-            network['RAPACE']['RoutersLoopback'][node['id']] = node['loopback']
+        if node['id'][0] == 's': 
+            node['device'] = network['RAPACE']['Switches'][node['id']]
+            if network['RAPACE']['Switches'][node['id']] == 'router':
+                node['loopback'] = '10.100.0.' + node['id'][1:] + '/32'
+                network['RAPACE']['RoutersLoopback'][node['id']] = node['loopback']
 
     with open('topology.json', 'w') as f:
         json.dump(data, f, indent=4)

@@ -112,6 +112,16 @@ control MyIngress(inout headers hdr,
         default_action = drop;
     }
 
+    table encap_lw {
+        key = {
+            hdr.ipv4.dstAddr: lpm;
+        }
+        actions = {
+            segRoute_encap;
+        }
+        size = 1024;
+    }
+
     table encap_rules {
         key = {
             hdr.ipv4.srcAddr: exact;
@@ -177,6 +187,7 @@ control MyIngress(inout headers hdr,
             else if (hdr.ipv4.protocol == TYPE_UDP){
                 meta.dstPort = hdr.udp.dstPort;
             }
+            encap_lw.apply();
             encap_rules.apply();
             switch (ipv4_lpm.apply().action_run){
                 ecmp_group: {

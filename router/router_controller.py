@@ -25,7 +25,7 @@ class RouterController(cmd2.Cmd):
         # os.close(devnull)
 
         super().__init__()  # Call the cmd2.Cmd __init__ method
-        self.topo = load_topo('topology.json')
+        self.topo = load_topo('logical_topology.json')
         self.sw_name = sw_name
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
@@ -71,7 +71,10 @@ class RouterController(cmd2.Cmd):
             loopback_ip = self.topo.get_nodes()[sw_dst].get('loopback')
 
             # Obtenir les chemins les plus courts vers le commutateur
-            paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+            try:
+                paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+            except:
+                continue
             # print("paths from {} to {} : {}".format(sw_name, sw_dst, paths))
 
             if len(paths) == 1:
@@ -122,7 +125,10 @@ class RouterController(cmd2.Cmd):
             #check if there are directly connected hosts
             else:
                 if self.topo.get_hosts_connected_to(sw_dst):
-                    paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+                    try:
+                        paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+                    except:
+                        continue
                     print("paths hosts from {} to {} with len {} : {}".format(sw_name, sw_dst, len(paths), paths))
                     for host in self.topo.get_hosts_connected_to(sw_dst):
 
@@ -216,6 +222,7 @@ class RouterController(cmd2.Cmd):
         self.controller.table_set_default("ipv4_lpm", "drop", [])
         self.controller.table_set_default("ecmp_group_to_nhop", "drop", [])
         self.controller.table_set_default("encap_routing", "drop", [])
+        self.topo = load_topo('logical_topology.json')
         self.route(self.sw_name)
 
 def matches_regex(string, regex):

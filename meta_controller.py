@@ -36,6 +36,23 @@ def add_loopbacks():
     with open('topology.json', 'w') as f:
         json.dump(data, f, indent=4)
 
+def generate_logical_network():
+    print("Generating logical network...")
+    with open('topology.json', 'r') as f:
+        data = json.load(f)
+    
+    for link in data['links'][:]: 
+        if [link['source'], link['target']] not in network['RAPACE']['Links'] and [link['target'], link['source']] not in network['RAPACE']['Links']:
+            data['links'].remove(link)
+    
+    for host in data['nodes'][:]:
+        if host['id'][0] == 'h':
+            print(host['id'], host['ip'])
+            network['RAPACE']['Hosts'][host['id']] = host['ip']
+            
+    with open('logical_topology.json', 'w') as f:
+        json.dump(data, f, indent=4)
+
 def routes_reload():
     print("Reloading routes...")
     for switch, controller in network['RAPACE']['Controllers'].items():
@@ -115,6 +132,7 @@ def remove_link(link):
     mininet.deleteLink(*link)
     network['RAPACE']['Links'].remove(link)
     print("Link " + str(link) + " removed.")
+    generate_logical_network()
     routes_reload()
 
 def add_link(link):
@@ -122,9 +140,9 @@ def add_link(link):
         link = ast.literal_eval(link)
     mininet.addLink(*link)
     network['RAPACE']['Links'].append(link)
-    print("Link " + str(link) + " added.")
+    generate_logical_network()    
     routes_reload()
-
+    
 def see_filters():
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'firewall':
@@ -182,7 +200,7 @@ class RAPACE_CLI(cmd2.Cmd):
     prompt = '\033[32mRAPACE_CLI> \033[0m'
 
     def __init__(self):
-        print("Generating network...")
+        print("Generating physical network...")
         global network
         network = generate_network()
         from network import runMininet # import when network.py is generated
@@ -191,6 +209,8 @@ class RAPACE_CLI(cmd2.Cmd):
         mininet = runMininet()
 
         add_loopbacks()
+
+        generate_logical_network()
 
         print("\nInitial topology : ")
         see_topology()
@@ -206,6 +226,7 @@ class RAPACE_CLI(cmd2.Cmd):
                 print(f"The Controller of {switch} has crashed.")
                 del network['RAPACE']['Controllers'][switch + 'Controller']
         sleep(3)
+        print("Network started.")
         super().__init__()
         # Hide undeletable builtin commands
         self.hidden_commands.append('alias')

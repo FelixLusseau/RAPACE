@@ -15,7 +15,7 @@ class RouterlwController(cmd2.Cmd):
 
     def __init__(self, sw_name):
         super().__init__()  # Call the cmd2.Cmd __init__ method
-        self.topo = load_topo('topology.json')
+        self.topo = load_topo('logical_topology.json')
         self.sw_name = sw_name
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
@@ -82,6 +82,7 @@ class RouterlwController(cmd2.Cmd):
     def do_routes_reload(self, args):
         self.controller.table_clear("encap_routing")
         self.controller.table_set_default("encap_routing", "drop", [])
+        self.topo = load_topo('logical_topology.json')
         self.route(self.sw_name)
     
 

@@ -14,7 +14,7 @@ class LoadBalancerController(cmd2.Cmd):
 
     def __init__(self, sw_name):
         super().__init__()
-        self.topo = load_topo('topology.json')
+        self.topo = load_topo('logical_topology.json')
         self.sw_name = sw_name
         self.port_in = 0
         self.packet_rate = 1
@@ -176,6 +176,7 @@ class LoadBalancerController(cmd2.Cmd):
 
     def do_routes_reload(self):
         self.reset_state()
+        self.topo = load_topo('logical_topology.json')
         self.update_tables()
         if(self.set_tables() == 1):
             print(f"Error: no port_in defined for loab_balancer {self.sw_name}, please define a port with set_port_in")

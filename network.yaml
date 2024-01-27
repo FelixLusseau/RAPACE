@@ -2,13 +2,16 @@ RAPACE:
   Switches:
     s0: router
     s1: router
+    s2: router
+    s3: router
+    s4: router
+    s5: router
   Hosts:
     h1:
     h2:
   Links:
     - [h1, s0]
     - [s0, s1]
-    - [s1, h2]
-
-
+    - [s3, h2]
+    - [s0, s2]
       

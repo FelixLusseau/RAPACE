@@ -15,7 +15,7 @@ class FirewallController(cmd2.Cmd):
 
     def __init__(self, sw_name):
         super().__init__()  # Call the cmd2.Cmd __init__ method
-        self.topo = load_topo('topology.json')
+        self.topo = load_topo('logical_topology.json')
         self.sw_name = sw_name
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
@@ -96,6 +96,7 @@ class FirewallController(cmd2.Cmd):
     def do_routes_reload(self, args):
         self.controller.table_clear("forward")
         self.controller.table_set_default("forward", "drop", [])
+        self.topo = load_topo('logical_topology.json')
         self.fill_mac_table(self.sw_name)
 
 

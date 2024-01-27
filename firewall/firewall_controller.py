@@ -67,6 +67,18 @@ class FirewallController(cmd2.Cmd):
         print("\u200B")
 
     def add_fw_rule(self, flow):
+        if flow[3] == 'tcp':
+            flow[3] = '6'
+        elif flow[3] == 'udp':
+            flow[3] = '17'
+        elif flow[3] == 'icmp':
+            flow[3] = '1'
+            flow[2] = '0'
+        else:
+            print("Error: protocol not supported")
+            print("\u200B")
+            return
+        
         self.controller.table_add("fw", "drop", flow, [])
         print("Rule : drop " + str(flow) + " added")
         print("\u200B")

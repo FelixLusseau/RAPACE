@@ -54,6 +54,7 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             forward_packet;
+            drop;
         }
         size = 2;
     }
@@ -92,8 +93,8 @@ control MyIngress(inout headers hdr,
             else if (hdr.ipv4.protocol == TYPE_UDP){
                 meta.dstPort = hdr.udp.dstPort;
             }
-            else {
-                // drop();
+            else if (hdr.ipv4.protocol == TYPE_ICMP){
+                meta.dstPort = 0; // ICMP does not have ports
             }
 
             fw.apply(); // Apply the firewall rules

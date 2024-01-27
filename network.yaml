@@ -1,11 +1,11 @@
 RAPACE:
   Switches:
     s0: router
-    s1: router
-    s2: router_lw
-    s3: router_lw
-    s4: router_lw
-    s5: router_lw
+    s1: firewall
+    s2: router
+    s3: router
+    s4: router
+    s5: router
     s6: router
     s7: router
     s8: router

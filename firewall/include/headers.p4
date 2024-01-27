@@ -1,5 +1,6 @@
 const bit<16> TYPE_IPV4 = 0x800;
 const bit<16> TYPE_SEGROUTE = 0x1234;
+const bit<8>  TYPE_ICMP = 1;
 const bit<8>  TYPE_TCP  = 6;
 const bit<8>  TYPE_UDP  = 17;
 

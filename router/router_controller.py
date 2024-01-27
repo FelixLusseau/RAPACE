@@ -14,6 +14,16 @@ class RouterController(cmd2.Cmd):
     prompt = 'Router_CLI> '
 
     def __init__(self, sw_name):
+        # # Save the original file descriptors for stdout and stderr
+        # orig_stdout = os.dup(1)
+        # orig_stderr = os.dup(2)
+
+        # # Open /dev/null and replace stdout and stderr with it
+        # devnull = os.open(os.devnull, os.O_WRONLY)
+        # os.dup2(devnull, 1)
+        # os.dup2(devnull, 2)
+        # os.close(devnull)
+
         super().__init__()  # Call the cmd2.Cmd __init__ method
         self.topo = load_topo('topology.json')
         self.sw_name = sw_name
@@ -25,6 +35,10 @@ class RouterController(cmd2.Cmd):
         self.route(self.sw_name)
         self.set_icmp_ingress_port_table(self.sw_name)
         self.controller.register_write('device_id_register', 0, sw_name[1:])
+
+        # # Restore the original file descriptors for stdout and stderr
+        # os.dup2(orig_stdout, 1)
+        # os.dup2(orig_stderr, 2)
     
     def reset_state(self):
         self.controller.reset_state()
@@ -32,6 +46,7 @@ class RouterController(cmd2.Cmd):
         self.controller.table_clear("ecmp_group_to_nhop")
         self.controller.table_clear("encap_routing")
         self.controller.table_clear("encap_rules")
+        self.controller.table_clear("encap_lw")
 
     def set_table_defaults(self):
         self.controller.table_set_default("ipv4_lpm", "drop", [])
@@ -128,7 +143,6 @@ class RouterController(cmd2.Cmd):
                                 checkpoint = paths[0][i]
                                 print("encap_lw segRoute_encap" + str(host_ip) + " => " + str(checkpoint[1:]))
                                 self.controller.table_add("encap_lw", "segRoute_encap", [str(host_ip)], [checkpoint[1:]])
-                            #else:
                             # print("ipv4_lpm set_nhop " + str(host_ip) + " => " + str(dst_sw_mac) + " " + str(sw_port))
                             self.controller.table_add("ipv4_lpm", "set_nhop", [str(host_ip)], [str(dst_sw_mac), str(sw_port)])
 
@@ -198,6 +212,7 @@ class RouterController(cmd2.Cmd):
         self.controller.table_clear("ecmp_group_to_nhop")
         self.controller.table_clear("encap_routing")
         self.controller.table_clear("encap_rules")
+        self.controller.table_clear("encap_lw")
         self.controller.table_set_default("ipv4_lpm", "drop", [])
         self.controller.table_set_default("ecmp_group_to_nhop", "drop", [])
         self.controller.table_set_default("encap_routing", "drop", [])

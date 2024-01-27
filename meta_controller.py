@@ -262,7 +262,7 @@ class RAPACE_CLI(cmd2.Cmd):
 
 
     add_fw_rule_argparser = cmd2.Cmd2ArgumentParser()
-    add_fw_rule_argparser.add_argument('flow', nargs=4, help="A flow is a string of the form 'src_ip dst_ip dst_port protocol'")
+    add_fw_rule_argparser.add_argument('flow', nargs=4, help="A flow is a string of the form 'src_ip dst_ip dst_port protocol'. The protocol can be tcp, udp or icmp")
     @cmd2.with_argparser(add_fw_rule_argparser)
     def do_add_fw_rule(self, args):
         """<flow> - Add a firewall rule. A flow is a string of the form 'src_ip dst_ip dst_port protocol'"""

@@ -62,7 +62,19 @@ def swap(node_id, equipment, *args):
     network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  
     print("The equipment of " + switch + " has been changed to " + equipment + ".")    
     routes_reload()
-            
+
+def add_node(name, type):
+    if(type == "host"):
+        mininet.addHost(name)
+    else:
+        mininet.addP4Switch(name)
+        network['RAPACE']['Switches'][name] = type
+        path = type + '/' + type + '_controller.py'
+        network['RAPACE']['Controllers'][name + 'Controller'] = subprocess.Popen(['python3', path, name], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
+        print(network['RAPACE']['Controllers'][name + 'Controller'])
+        if network['RAPACE']['Controllers'][name + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][name + 'Controller'].poll() != 0:
+            print(f"The Controller of {name} has crashed.")
+            del network['RAPACE']['Controllers'][name + 'Controller']
 
 def see_topology():
     topo = network['RAPACE'].copy()
@@ -292,6 +304,14 @@ class RAPACE_CLI(cmd2.Cmd):
         """<node_src> <flow> <node_dst> - Add an encapsulation node"""
         flow = ' '.join(args.flow)
         add_encap_node(args.node_src, flow, args.node_dst)
+
+    add_node_argparser = cmd2.Cmd2ArgumentParser()
+    add_node_argparser.add_argument('name', help="The name of the equipment")
+    add_node_argparser.add_argument('type',choices=['firewall', 'router', 'router_lw', 'load_balancer'], help="The type of the node")
+    @cmd2.with_argparser(add_node_argparser)
+    def do_add_node(self, args):
+        """<node_name> <type>"""
+        add_node(args.name, args.type)
         
 
 # Main function

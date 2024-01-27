@@ -97,7 +97,7 @@ class LoadBalancerController(cmd2.Cmd):
                 print(f"Table: ecmp_nhop. Line added: {index_out} ecmp_hash {sw_mac} {port_out[index_out]}\n")
                 index_out = index_out + 1
 
-    def change_port_in_tables(self):
+    def update_tables(self):
         mac_address_port_in = self.get_mac_address_port_in()
 
         #check if we have a port_in existing
@@ -169,12 +169,17 @@ class LoadBalancerController(cmd2.Cmd):
         else:
             self.port_in = int(self.topo.node_to_node_port_num(self.sw_name, target[0]))
             if(self.port_in is not None):
-                self.change_port_in_tables()
+                self.update_tables()
                 print("Port_in changed")
             else:
                 print("\033[31mError, bad switch or host given\033[0m")
 
-    
+    def do_routes_reload(self):
+        self.reset_state()
+        self.update_tables()
+        if(self.set_tables() == 1):
+            print(f"Error: no port_in defined for loab_balancer {self.sw_name}, please define a port with set_port_in")
+            self.port_in = 0
 
 
 

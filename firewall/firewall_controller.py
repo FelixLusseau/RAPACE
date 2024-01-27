@@ -52,7 +52,7 @@ class FirewallController(cmd2.Cmd):
     def see_filters(self):
         nb_entries = self.controller.table_num_entries('fw')
         if nb_entries == 0:
-            print("No rule")
+            print("\033[33mNo rule to display !\033[31m")
             print("\u200B")
             return
         for i in range(0,nb_entries):
@@ -75,7 +75,7 @@ class FirewallController(cmd2.Cmd):
             flow[3] = '1'
             flow[2] = '0'
         else:
-            print("Error: protocol not supported")
+            print("\033[31mError: protocol " + flow[3] + " not supported ! Use one of 'icmp', 'tcp' or 'udp'\033[0m")
             print("\u200B")
             return
         

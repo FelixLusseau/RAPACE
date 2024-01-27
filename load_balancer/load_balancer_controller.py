@@ -65,7 +65,7 @@ class LoadBalancerController(cmd2.Cmd):
 
         #check if we have a port_in existing
         if mac_address_port_in is None:
-            print(f"No switches facing port_in: {self.port_in}")
+            print(f"\033[31mNo switches facing port_in: {self.port_in}\033[0m")
             return 0
 
         #get the number of port out possibilites
@@ -102,7 +102,7 @@ class LoadBalancerController(cmd2.Cmd):
 
         #check if we have a port_in existing
         if mac_address_port_in is None:
-            print(f"No switches facing port_in: {self.port_in}")
+            print(f"\033[31mNo switches facing port_in: {self.port_in}\033[0m")
             return 0
 
         #get the number of port out possibilites
@@ -165,14 +165,14 @@ class LoadBalancerController(cmd2.Cmd):
                 self.set_tables()
                 print("Port_in changed")
             else:
-                print("Error, bad switch or host given")
+                print("\033[31mError, bad switch or host given\033[0m")
         else:
             self.port_in = int(self.topo.node_to_node_port_num(self.sw_name, target[0]))
             if(self.port_in is not None):
                 self.change_port_in_tables()
                 print("Port_in changed")
             else:
-                print("Error, bad switch or host given")
+                print("\033[31mError, bad switch or host given\033[0m")
 
     
 

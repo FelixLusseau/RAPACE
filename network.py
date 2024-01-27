@@ -9,31 +9,13 @@ def runMininet():
 	# Network definition
 	net.addP4Switch('s0')
 	net.addP4Switch('s1')
-	net.addP4Switch('s2')
-	net.addP4Switch('s3')
-	net.addP4Switch('s4')
-	net.addP4Switch('s5')
-	net.addP4Switch('s6')
-	net.addP4Switch('s7')
-	net.addP4Switch('s8')
-	net.addP4Switch('s9')
-	net.addP4Switch('s10')
 
 	net.addHost('h1')
 	net.addHost('h2')
 
 	net.addLink('h1', 's0')
 	net.addLink('s0', 's1')
-	net.addLink('s1', 's2')
-	net.addLink('s2', 's3')
-	net.addLink('s3', 's4')
-	net.addLink('s4', 's5')
-	net.addLink('s5', 's6')
-	net.addLink('s6', 's7')
-	net.addLink('s7', 's8')
-	net.addLink('s8', 's9')
-	net.addLink('s9', 's10')
-	net.addLink('s10', 'h2')
+	net.addLink('s1', 'h2')
 
 	# Assignment strategy
 	net.l3()

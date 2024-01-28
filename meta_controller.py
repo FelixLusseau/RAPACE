@@ -53,7 +53,7 @@ def generate_logical_network():
             
     with open('logical_topology.json', 'w') as f:
         json.dump(data, f, indent=4)
-
+    
 def routes_reload():
     print("Reloading routes...")
     for switch, controller in network['RAPACE']['Controllers'].items():
@@ -78,6 +78,7 @@ def swap(node_id, equipment, *args):
     network['RAPACE']['Switches'][switch] = equipment
     path = equipment + '/' + equipment + '_controller.py'
     network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  
+    sleep(3)
     print("The equipment of " + switch + " has been changed to " + equipment + ".")    
     routes_reload()
 
@@ -97,15 +98,89 @@ def see_topology():
     topo = network['RAPACE'].copy()
     if 'Controllers' in topo:
         del topo['Controllers']
-    # print(topo)
+
     pprint.pprint(topo)
 
     plt.figure()
 
-    from p4utils.utils.helper import load_topo
-    G = load_topo('logical_topology.json')
+    G = nx.Graph()
 
-    nx.draw(G, with_labels=True)
+    device_types = network['RAPACE']['Switches'].values()
+
+    # Create a dictionary where the keys are device types and the values are empty lists
+    device_lists = {device_type: [] for device_type in device_types}
+
+    # Now you can add devices to the lists based on their type
+    for switch, device in network['RAPACE']['Switches'].items():  
+        device_type = device  
+        device_lists[device_type].append(switch)
+    
+    # print(device_lists)
+
+    # Add switches and hosts as nodes
+    for device_type, switches in device_lists.items():
+        for switch in switches:
+            G.add_node(switch, device_type=device_type)
+    
+    # Add hosts
+    hosts = network['RAPACE']['Hosts']
+    for host in hosts:
+        G.add_node(host)
+
+    pos = nx.spring_layout(G)
+    # pos = nx.circular_layout(G)  # Use circular layout
+
+    # Draw switches with different colors based on their type
+    color_map = {'router': 'blue', 'router_lw': 'cyan', 'firewall': 'red', 'load_balancer': 'green'}  # Replace with your actual device types and colors
+    for device_type, switches in device_lists.items():
+        color = color_map[device_type]
+        nx.draw_networkx_nodes(G, pos, nodelist=switches, node_color=color)
+
+    # Draw hosts
+    hosts = network['RAPACE']['Hosts']
+    for host in hosts:
+        G.add_node(host)
+    nx.draw_networkx_nodes(G, pos, nodelist=hosts, node_color='black')
+
+    # Add links as edges
+    for link in network['RAPACE']['Links']:
+        # Extract weight from link attributes
+        weight = next((attr.split('=')[1].strip() for attr in link if attr.startswith('weight =')), 1)
+        # Make sure the nodes exist before adding the edge
+        if link[0] in G.nodes and link[1] in G.nodes:
+            G.add_edge(link[0], link[1], weight=int(weight))
+
+    elarge = [(u, v) for (u, v, d) in G.edges(data=True) if d["weight"] > 1]
+    esmall = [(u, v) for (u, v, d) in G.edges(data=True) if d["weight"] <= 1]
+
+    # Draw edges
+    nx.draw_networkx_edges(G, pos, edgelist=elarge, width=6)
+    nx.draw_networkx_edges(G, pos, edgelist=esmall, width=6, alpha=0.5, edge_color="b", style="dashed")
+
+    # Create labels for switches
+    switch_labels = {switch: f'{switch}\n{device_type}' for device_type, switches in device_lists.items() for switch in switches}
+
+    # Create labels for hosts
+    host_labels = {host: f'{host}\nHost' for host in network['RAPACE']['Hosts']}
+
+    # Combine switch and host labels
+    labels = {**switch_labels, **host_labels}
+
+    # Draw labels
+    label_pos = {node: (pos[node][0], pos[node][1] + 0.2) for node in G.nodes}  # Adjust y position of labels
+    nx.draw_networkx_labels(G, label_pos, labels=labels)
+    edge_labels = nx.get_edge_attributes(G, "weight")
+    nx.draw_networkx_edge_labels(G, pos, edge_labels)
+
+    # Adjust plot limits
+    x_values, y_values = zip(*pos.values())
+    x_max = max(x_values)
+    x_min = min(x_values)
+    y_max = max(y_values)
+    y_min = min(y_values)
+
+    plt.xlim(x_min - 0.4, x_max + 0.4)
+    plt.ylim(y_min - 0.4, y_max + 0.4)
 
     plt.savefig('network.png')
 

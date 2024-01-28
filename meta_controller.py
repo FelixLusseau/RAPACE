@@ -9,6 +9,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 def flush_controller():
+    """Flush the controller's stdout"""
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers']:
             network['RAPACE']['Controllers'][switch + 'Controller'].stdout.flush()

@@ -93,18 +93,6 @@ def swap(node_id, equipment, *args):
     print("The equipment of " + switch + " has been changed to " + equipment + ".")    
     routes_reload()
 
-def add_node(name, type):
-    if(type == "host"):
-        mininet.addHost(name)
-    else:
-        mininet.addP4Switch(name)
-        network['RAPACE']['Switches'][name] = type
-        path = type + '/' + type + '_controller.py'
-        network['RAPACE']['Controllers'][name + 'Controller'] = subprocess.Popen(['python3', path, name], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
-        if network['RAPACE']['Controllers'][name + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][name + 'Controller'].poll() != 0:
-            print(f"The Controller of {name} has crashed.")
-            del network['RAPACE']['Controllers'][name + 'Controller']
-
 def see_topology():
     """Print the topology in the terminal and in the network.png file"""
     topo = network['RAPACE'].copy()
@@ -315,7 +303,6 @@ class RAPACE_CLI(cmd2.Cmd):
                 print(f"\033[31mThe Controller of {switch} has crashed.\033[0m")
                 del network['RAPACE']['Controllers'][switch + 'Controller']
         print("Please wait for the equipments to set up")
-        sleep(3) # Wait for the P4 equipment to start
         super().__init__()
         # Hide undeletable builtin commands
         self.hidden_commands.append('alias')

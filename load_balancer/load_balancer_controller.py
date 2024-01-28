@@ -178,7 +178,7 @@ class LoadBalancerController(cmd2.Cmd):
 
     def update_packet_rate(self, rate):
         self.controller.meter_array_set_rates("my_meter", [(rate,1),(rate,1)])
-        print("packet rate updated !") 
+        print("Packet rate updated !") 
 
     def see_load(self):
         self.controller.counter_read('count_in', 0)
@@ -196,7 +196,7 @@ class LoadBalancerController(cmd2.Cmd):
         print("\u200B")       
 
     def see_rate(self):
-        print(f"packet rate is {self.packet_rate}")     
+        print(f"Packet rate is {self.packet_rate}")     
         print("\u200B")     
 
     def do_see(self, args):

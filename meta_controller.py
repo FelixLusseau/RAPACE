@@ -64,6 +64,11 @@ def generate_logical_network():
     for host in data['nodes'][:]:
         if host['id'][0] == 'h':
             network['RAPACE']['Hosts'][host['id']] = host['ip']
+
+    # Convert weight values to integers
+    for link in data.get('links', []):
+        if 'weight' in link and isinstance(link['weight'], str):
+            link['weight'] = int(link['weight'])
             
     with open('logical_topology.json', 'w') as f:
         json.dump(data, f, indent=4)

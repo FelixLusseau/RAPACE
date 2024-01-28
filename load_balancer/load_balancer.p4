@@ -27,11 +27,15 @@ control MyIngress(inout headers hdr,
 
     counter(1, CounterType.packets) count_in;
 
+    meter(32, MeterType.packets) my_meter;
+
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
     action set_nhop(macAddr_t dstAddr, egressSpec_t port) {
+
+        my_meter.execute_meter<bit<32>>((bit<32>)port, meta.meter_tag);
 
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
 
@@ -76,7 +80,7 @@ control MyIngress(inout headers hdr,
             set_nhop;
             ecmp_hash;
             drop;
-        }   
+        }
         size = 1024;
         default_action = drop;
     }
@@ -91,6 +95,10 @@ control MyIngress(inout headers hdr,
                     ecmp_nhop.apply();
                 }
             }
+        }
+        //If meter is above rate limit
+        if(meta.meter_tag > 0){
+            mark_to_drop(standard_metadata);
         }
     }
 }

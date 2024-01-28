@@ -90,7 +90,6 @@ def add_node(name, type):
         network['RAPACE']['Switches'][name] = type
         path = type + '/' + type + '_controller.py'
         network['RAPACE']['Controllers'][name + 'Controller'] = subprocess.Popen(['python3', path, name], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
-        print(network['RAPACE']['Controllers'][name + 'Controller'])
         if network['RAPACE']['Controllers'][name + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][name + 'Controller'].poll() != 0:
             print(f"The Controller of {name} has crashed.")
             del network['RAPACE']['Controllers'][name + 'Controller']

@@ -2,12 +2,16 @@ RAPACE:
   Switches:
     s0: load_balancer
     s1: load_balancer
+    s2: firewall
+    s3: firewall
   Hosts:
     h1:
     h2:
   Links:
     - [h1, s0]
-    - [s0, s1]
-    - [s3, h2]
     - [s0, s2]
+    - [s0, s3]
+    - [s1, s2]
+    - [s1, s3]    
+    - [s1, h2]
       

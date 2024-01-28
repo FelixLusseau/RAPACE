@@ -58,6 +58,11 @@ class LoadBalancerController(cmd2.Cmd):
             if(sw_port != self.port_in):
                 port_list.append(sw_port)
 
+        for host in self.topo.get_hosts_connected_to(self.sw_name):
+            host_port = self.topo.node_to_node_port_num(self.sw_name, sw)
+            if(host_port != self.port_in):
+                port_list.append(host_port)
+
         return port_list
 
     def set_tables(self):
@@ -82,10 +87,12 @@ class LoadBalancerController(cmd2.Cmd):
         #                      else hash function to get a random port out
         #table: ecmp_nhop : from the hash result return a valid port_out
             
+        is_port_in_host = 0 #0=true, 1=false
+
         for sw in self.topo.get_switches_connected_to(self.sw_name):
             sw_port = self.topo.node_to_node_port_num(self.sw_name, sw)
             sw_mac = self.topo.node_to_node_mac(self.sw_name, sw)
-            
+
             #If it comes from port_in return 0 for port_out
             if sw_port == self.port_in:
                 self.controller.table_add("port_to_nhop", "ecmp_hash", [str(sw_port)], [str(num_nhop)])
@@ -96,6 +103,22 @@ class LoadBalancerController(cmd2.Cmd):
                 print(f"Table: port_to_nhop. Line added: {sw_port} set_nhop {mac_address_port_in} {self.port_in}\n")
                 self.controller.table_add("ecmp_nhop", "set_nhop", [str(index_out)], [str(sw_mac), str(port_out[index_out])])
                 print(f"Table: ecmp_nhop. Line added: {index_out} ecmp_hash {sw_mac} {port_out[index_out]}\n")
+                index_out = index_out + 1
+
+        for host in self.topo.get_hosts_connected_to(self.sw_name):
+            host_port = self.topo.node_to_node_port_num(self.sw_name, host)
+            host_mac = self.topo.node_to_node_mac(self.sw_name, host)
+
+            #If it comes from port_in return 0 for port_out
+            if host_port == self.port_in:
+                self.controller.table_add("port_to_nhop", "ecmp_hash", [str(host_port)], [str(num_nhop)])
+                print(f"Table: port_to_nhop. Line added: {host_port} ecmp_hash {num_nhop}\n")
+            #Else send it to port_in
+            else:
+                self.controller.table_add("port_to_nhop", "set_nhop", [str(host_port)], [str(mac_address_port_in), str(self.port_in)])
+                print(f"Table: port_to_nhop. Line added: {host_port} set_nhop {mac_address_port_in} {self.port_in}\n")
+                self.controller.table_add("ecmp_nhop", "set_nhop", [str(index_out)], [str(sw_mac), str(port_out[index_out])])
+                print(f"Table: ecmp_nhop. Line added: {index_out} ecmp_hash {host_mac} {port_out[index_out]}\n")
                 index_out = index_out + 1
 
     def update_tables(self):
@@ -117,7 +140,7 @@ class LoadBalancerController(cmd2.Cmd):
         for sw in self.topo.get_switches_connected_to(self.sw_name):
             sw_port = self.topo.node_to_node_port_num(self.sw_name, sw)
             sw_mac = self.topo.node_to_node_mac(self.sw_name, sw)
-            
+
             #If it comes from port_in return 0 for port_out
             if sw_port == self.port_in:
                 self.controller.table_modify_match("port_to_nhop", "ecmp_hash", [str(sw_port)], [str(num_nhop)])
@@ -127,11 +150,29 @@ class LoadBalancerController(cmd2.Cmd):
                 self.controller.table_modify_match("port_to_nhop", "set_nhop", [str(sw_port)], [str(mac_address_port_in), str(self.port_in)])
                 print(f"Table: port_to_nhop. Line modified: {sw_port} set_nhop {mac_address_port_in} {self.port_in}\n")
                 self.controller.table_modify_match("ecmp_nhop", "set_nhop", [str(index_out)], [str(sw_mac), str(port_out[index_out])])
-                print(f"Table: ecmp_nhop. Line modified: {index_out} ecmp_hash {sw_mac} {port_out[index_out]}\n") 
+                print(f"Table: ecmp_nhop. Line modified: {index_out} ecmp_hash {sw_mac} {port_out[index_out]}\n")
+                index_out = index_out + 1
+
+        for host in self.topo.get_hosts_connected_to(self.sw_name):
+            host_port = self.topo.node_to_node_port_num(self.sw_name, host)
+            host_mac = self.topo.node_to_node_mac(self.sw_name, host)
+
+            #If it comes from port_in return 0 for port_out
+            if host_port == self.port_in:
+                self.controller.table_modify_match("port_to_nhop", "ecmp_hash", [str(host_port)], [str(num_nhop)])
+                print(f"Table: port_to_nhop. Line modfied: {host_port} ecmp_hash {num_nhop}\n")
+            #Else send it to port_in
+            else:
+                self.controller.table_modify_match("port_to_nhop", "set_nhop", [str(host_port)], [str(mac_address_port_in), str(self.port_in)])
+                print(f"Table: port_to_nhop. Line modified: {host_port} set_nhop {mac_address_port_in} {self.port_in}\n")
+                self.controller.table_modify_match("ecmp_nhop", "set_nhop", [str(index_out)], [str(host_mac), str(port_out[index_out])])
+                print(f"Table: ecmp_nhop. Line modified: {index_out} ecmp_hash {host_mac} {port_out[index_out]}\n")
+                index_out = index_out + 1
 
 
     def update_packet_rate(self, rate):
-        self.controller.meter_array_set_rates("my_meter", [(rate/1000000,1),((rate+1)/1000000,1)])
+        print("packet rate updated !")
+        self.controller.meter_array_set_rates("my_meter", [(rate,1),(rate,1)])
 
     def see_load(self):
         print("Total counter: ")
@@ -147,17 +188,23 @@ class LoadBalancerController(cmd2.Cmd):
         for i in range(0, nb_entries):
             print("\nRule " + str(i) + " : ")
             print(str(self.controller.table_dump_entry('port_to_nhop', i)))
-        print("\u200B")                   
+        print("\u200B")       
+
+    def see_rate(self):
+        print(f"packet rate is {self.packet_rate}")     
+        print("\u200B")     
 
     def do_see(self, args):
         if args == 'table':
             self.see_table()
         elif args == 'load':
             self.see_load()
+        elif args == 'rate':
+            self.see_rate()
 
     def do_set_pck_rate(self, rate):
-        self.packet_rate = int(rate)
-        self.update_packet_rate(rate)
+        self.packet_rate = float(rate)/1000000
+        self.update_packet_rate(self.packet_rate)
 
     def do_set_port_in(self, args):
         #if first time

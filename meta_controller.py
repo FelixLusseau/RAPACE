@@ -36,6 +36,24 @@ def add_loopbacks():
     with open('topology.json', 'w') as f:
         json.dump(data, f, indent=4)
 
+def generate_logical_network():
+    print("Generating logical network...")
+    with open('topology.json', 'r') as f:
+        data = json.load(f)
+    
+    for link in data['links'][:]: 
+        for link in data['links'][:]:  # Create a copy of the list to iterate over
+            if [link['source'], link['target']] not in [l[:2] for l in network['RAPACE']['Links']] and \
+            [link['target'], link['source']] not in [l[:2] for l in network['RAPACE']['Links']]:
+                data['links'].remove(link)
+    
+    for host in data['nodes'][:]:
+        if host['id'][0] == 'h':
+            network['RAPACE']['Hosts'][host['id']] = host['ip']
+            
+    with open('logical_topology.json', 'w') as f:
+        json.dump(data, f, indent=4)
+
 def routes_reload():
     print("Reloading routes...")
     for switch, controller in network['RAPACE']['Controllers'].items():
@@ -82,30 +100,23 @@ def see_topology():
     # print(topo)
     pprint.pprint(topo)
 
-    G = nx.Graph()
+    plt.figure()
 
-    # Ajoutez les switches et les hôtes comme nœuds
-    for node in network['RAPACE']['Switches']:
-        G.add_node(node)
-    for node in network['RAPACE']['Hosts']:
-        G.add_node(node)
+    from p4utils.utils.helper import load_topo
+    G = load_topo('logical_topology.json')
 
-    # Ajoutez les liens comme arêtes
-    for link in network['RAPACE']['Links']:
-        # Supprimez les poids des liens pour la visualisation
-        link = [node for node in link if not node.startswith('weight=')]
-        G.add_edge(*link)
-    
     nx.draw(G, with_labels=True)
-    # plt.show()
+
     plt.savefig('network.png')
 
 def change_weight(link, weight):
     if isinstance(link, str):
         link = ast.literal_eval(link)
     mininet.updateLink(*link, weight=weight)
+    mininet.save_topology()
     network['RAPACE']['Links'][network['RAPACE']['Links'].index(link)].append("weight = " + weight)
     print("Weight of " + str(link) + " changed to " + weight + ".")
+    generate_logical_network()
     routes_reload()
 
 def remove_link(link):
@@ -114,6 +125,7 @@ def remove_link(link):
     mininet.deleteLink(*link)
     network['RAPACE']['Links'].remove(link)
     print("Link " + str(link) + " removed.")
+    generate_logical_network()
     routes_reload()
 
 def add_link(link):
@@ -121,9 +133,9 @@ def add_link(link):
         link = ast.literal_eval(link)
     mininet.addLink(*link)
     network['RAPACE']['Links'].append(link)
-    print("Link " + str(link) + " added.")
+    generate_logical_network()    
     routes_reload()
-
+    
 def see_filters():
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'firewall':
@@ -181,7 +193,7 @@ class RAPACE_CLI(cmd2.Cmd):
     prompt = '\033[32mRAPACE_CLI> \033[0m'
 
     def __init__(self):
-        print("Generating network...")
+        print("Generating physical network...")
         global network
         network = generate_network()
         from network import runMininet # import when network.py is generated
@@ -190,6 +202,8 @@ class RAPACE_CLI(cmd2.Cmd):
         mininet = runMininet()
 
         add_loopbacks()
+
+        generate_logical_network()
 
         print("\nInitial topology : ")
         see_topology()
@@ -205,6 +219,7 @@ class RAPACE_CLI(cmd2.Cmd):
                 print(f"The Controller of {switch} has crashed.")
                 del network['RAPACE']['Controllers'][switch + 'Controller']
         sleep(3)
+        print("Network started.")
         super().__init__()
         # Hide undeletable builtin commands
         self.hidden_commands.append('alias')
@@ -248,7 +263,7 @@ class RAPACE_CLI(cmd2.Cmd):
 
 
     change_weight_argparser = cmd2.Cmd2ArgumentParser()
-    change_weight_argparser.add_argument('link', help="A link is a string of the form ['src', 'dst', [port_on_src, port_on_dst]]")
+    change_weight_argparser.add_argument('link', help="A link is a string of the form ['src','dst']")
     change_weight_argparser.add_argument('weight', help="The new weight of the link")
     @cmd2.with_argparser(change_weight_argparser)
     def do_change_weight(self, args):
@@ -257,7 +272,7 @@ class RAPACE_CLI(cmd2.Cmd):
 
 
     remove_link_argparser = cmd2.Cmd2ArgumentParser()
-    remove_link_argparser.add_argument('link', help="A link is a string of the form ['src', 'dst', [port_on_src, port_on_dst]]")
+    remove_link_argparser.add_argument('link', help="A link is a string of the form ['src','dst']")
     @cmd2.with_argparser(remove_link_argparser)
     def do_remove_link(self, args):
         """<link> - Remove a link"""
@@ -265,7 +280,7 @@ class RAPACE_CLI(cmd2.Cmd):
 
 
     add_link_argparser = cmd2.Cmd2ArgumentParser()
-    add_link_argparser.add_argument('link', help="A link is a string of the form ['src', 'dst', [port_on_src, port_on_dst]]")
+    add_link_argparser.add_argument('link', help="A link is a string of the form ['src','dst']")
     @cmd2.with_argparser(add_link_argparser)
     def do_add_link(self, args):
         """<link> - Add a link"""

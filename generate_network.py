@@ -6,6 +6,8 @@ def generate_network():
 
     # print("Initial topology : ")
     # print(topology)
+        
+    nSwitches = len(topology['RAPACE']['Switches'])
 
     with open('network.py', 'w') as file:
         file.write('from p4utils.mininetlib.network_API import NetworkAPI\n\n')
@@ -18,12 +20,22 @@ def generate_network():
         for switch, value in topology['RAPACE']['Switches'].items():
             file.write('\tnet.addP4Switch(\'' + switch + '\')\n')
         file.write('\n')
+        file.write('\tfor i in range(0, ' + str(nSwitches) + '):\n')
+        file.write('\t\tfor j in range(i, ' + str(nSwitches) + '):\n')
+        file.write('\t\t\tif i != j:\n')
+        file.write('\t\t\t\tnet.addLink(f\'s{i}\', f\'s{j}\')\n')
+        file.write('\n')
         for host, value in topology['RAPACE']['Hosts'].items():
             file.write('\tnet.addHost(\'' + host + '\')\n')
+        # file.write('\tfor i in range(1, ' + str(nSwitches) + '):\n')
+        # file.write('\t\tnet.addHost(f\'h{i}\')\n')
         file.write('\n')
+        # file.write('\tfor i in range(1, ' + str(nSwitches) + '):\n')
+        # file.write('\t\tnet.addLink(f\'h{i}\', f\'s{i}\')\n')
         for link in topology['RAPACE']['Links']:
-            args = ', '.join('\'' + v + '\'' if isinstance(v, str) else str(v) for v in link)
-            file.write('\tnet.addLink(' + args + ')\n')
+            if link[0].startswith('h') or link[1].startswith('h'):
+                args = ', '.join('\'' + v + '\'' if isinstance(v, str) else str(v) for v in link)
+                file.write('\tnet.addLink(' + args + ')\n')
         file.write('\n')
         file.write('\t# Assignment strategy\n')
         file.write('\tnet.l3()\n\n')
@@ -38,4 +50,4 @@ def generate_network():
     print("Network file generated.")
     return topology
 
-# generate_network()
+generate_network()

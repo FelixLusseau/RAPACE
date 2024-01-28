@@ -44,8 +44,10 @@ control MyIngress(inout headers hdr,
         }
         actions = {
             segRoute_port;
+            drop;
         }
         size = 1024;
+        default_action = drop;
     }
 
     apply {

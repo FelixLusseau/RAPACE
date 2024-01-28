@@ -102,6 +102,7 @@ class FirewallController(cmd2.Cmd):
         self.controller.table_set_default("forward", "drop", [])
         self.topo = load_topo('logical_topology.json')
         self.fill_mac_table(self.sw_name)
+        print("\u200B")
 
 
 def matches_regex(string, regex):

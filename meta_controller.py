@@ -80,7 +80,7 @@ def routes_reload():
         controller.stdin.write('routes_reload' + '\n')
         controller.stdin.flush()
 
-def swap(node_id, equipment, *args):
+def swap(node_id, equipment):
     """Swap the equipment of a node or add one"""
     switch = node_id if node_id.startswith('s') else 's' + node_id
     if switch not in network['RAPACE']['Switches']:
@@ -101,18 +101,6 @@ def swap(node_id, equipment, *args):
     sleep(5) # Wait for the P4 equipment to start
     print("The equipment of " + switch + " has been changed to " + equipment + ".")    
     routes_reload()
-
-def add_node(name, type):
-    if(type == "host"):
-        mininet.addHost(name)
-    else:
-        mininet.addP4Switch(name)
-        network['RAPACE']['Switches'][name] = type
-        path = type + '/' + type + '_controller.py'
-        network['RAPACE']['Controllers'][name + 'Controller'] = subprocess.Popen(['python3', path, name], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
-        if network['RAPACE']['Controllers'][name + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][name + 'Controller'].poll() != 0:
-            print(f"The Controller of {name} has crashed.")
-            del network['RAPACE']['Controllers'][name + 'Controller']
 
 def see_topology():
     """Print the topology in the terminal and in the network.png file"""
@@ -262,7 +250,7 @@ def add_fw_rule(flow):
 def set_rate_lb(lb_id, rate):
     for switch, controller in network['RAPACE']['Switches'].items():
             if controller == 'load_balancer' and switch == lb_id:
-                send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_rate_lb ' + rate)
+                send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_pck_rate ' + rate)
 
 def set_port_in(lb_id, port_in):
     lb_id = lb_id if lb_id.startswith('s') else 's' + lb_id
@@ -344,14 +332,12 @@ class RAPACE_CLI(cmd2.Cmd):
     swap_argparser = cmd2.Cmd2ArgumentParser()
     swap_argparser.add_argument('node_id', help="The name of the node")
     swap_argparser.add_argument('equipment', choices=['firewall', 'router', 'router_lw', 'load_balancer'], help="The new equipment of the node")
-    swap_argparser.add_argument('args', nargs='*')
     @cmd2.with_argparser(swap_argparser)
     def do_swap(self, args):
-        """<node_id> <equipment> [args] - Swap the equipment of a node or add one"""
+        """<node_id> <equipment>- Swap the equipment of a node or add one"""
         node_id = args.node_id
         equipment = args.equipment
-        extra_args = args.args
-        swap(node_id, equipment, *extra_args)
+        swap(node_id, equipment)
 
 
     see_argparser = cmd2.Cmd2ArgumentParser()
@@ -413,12 +399,12 @@ class RAPACE_CLI(cmd2.Cmd):
         set_rate_lb(args.lb_id, args.rate)
 
     set_port_in_argparser = cmd2.Cmd2ArgumentParser()
-    set_port_in_argparser.add_argument('lb_id', help="The name of the targeted loadbalancer")
+    set_port_in_argparser.add_argument('lb_name', help="The name of the targeted loadbalancer")
     set_port_in_argparser.add_argument('port_in', help="Name of the equipment or host facing the interface that you want to set as port_in")
     @cmd2.with_argparser(set_port_in_argparser)
     def do_set_port_in(self, args):
-        """<lb_id> <port_in> - Set the port_in of the loadbalancer"""
-        set_port_in(args.lb_id, args.port_in)
+        """<lb_name> <port_in> - Set the port_in of the loadbalancer"""
+        set_port_in(args.lb_name, args.port_in)
 
     add_encap_node_argparser = cmd2.Cmd2ArgumentParser()
     add_encap_node_argparser.add_argument('node_src', help="The name of the source node")
@@ -429,14 +415,6 @@ class RAPACE_CLI(cmd2.Cmd):
         """<node_src> <flow> <node_dst> - Add an encapsulation node"""
         flow = ' '.join(args.flow)
         add_encap_node(args.node_src, flow, args.node_dst)
-
-    add_node_argparser = cmd2.Cmd2ArgumentParser()
-    add_node_argparser.add_argument('name', help="The name of the equipment")
-    add_node_argparser.add_argument('type',choices=['firewall', 'router', 'router_lw', 'load_balancer'], help="The type of the node")
-    @cmd2.with_argparser(add_node_argparser)
-    def do_add_node(self, args):
-        """<node_name> <type>"""
-        add_node(args.name, args.type)
         
 
 # Main function

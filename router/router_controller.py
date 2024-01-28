@@ -14,16 +14,6 @@ class RouterController(cmd2.Cmd):
     prompt = 'Router_CLI> '
 
     def __init__(self, sw_name):
-        # # Save the original file descriptors for stdout and stderr
-        # orig_stdout = os.dup(1)
-        # orig_stderr = os.dup(2)
-
-        # # Open /dev/null and replace stdout and stderr with it
-        # devnull = os.open(os.devnull, os.O_WRONLY)
-        # os.dup2(devnull, 1)
-        # os.dup2(devnull, 2)
-        # os.close(devnull)
-
         super().__init__()  # Call the cmd2.Cmd __init__ method
         self.topo = load_topo('logical_topology.json')
         self.sw_name = sw_name
@@ -37,10 +27,6 @@ class RouterController(cmd2.Cmd):
         self.controller.register_write('device_id_register', 0, sw_name[1:])
         print(f"\033[32mRouter {sw_name} ready\033[0m", flush=True)
         print("\u200B")
-
-        # # Restore the original file descriptors for stdout and stderr
-        # os.dup2(orig_stdout, 1)
-        # os.dup2(orig_stderr, 2)
     
     def reset_state(self):
         self.controller.reset_state()
@@ -77,7 +63,7 @@ class RouterController(cmd2.Cmd):
                 paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
             except:
                 continue
-            # print("paths from {} to {} : {}".format(sw_name, sw_dst, paths))
+            print("paths from {} to {} : {} (switches)".format(sw_name, sw_dst, paths))
 
             if len(paths) == 1:
                 if len(paths[0]) == 1:
@@ -132,7 +118,7 @@ class RouterController(cmd2.Cmd):
                         paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
                     except:
                         continue
-                    # print("paths hosts from {} to {} with len {} : {}".format(sw_name, sw_dst, len(paths), paths))
+                    print("paths hosts from {} to {} with len {} : {}".format(sw_name, sw_dst, len(paths), paths))
                     for host in self.topo.get_hosts_connected_to(sw_dst):
 
                         if len(paths) == 1:
@@ -158,10 +144,21 @@ class RouterController(cmd2.Cmd):
 
                         elif len(paths) > 1:
                             next_hops = [x[1] for x in paths]
+                            print("next hops : " + str(next_hops))
                             dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
                                                 self.topo.node_to_node_port_num(sw_name, next_hop))
                                                 for next_hop in next_hops]
                             host_ip = self.topo.get_host_ip(host) + "/24"
+
+                            for next_hop in next_hops:
+                                # Encapsulate the packet if the next hop is a lw router
+                                if self.topo.get_nodes()[next_hop].get('device') == 'router_lw':
+                                    i = 2
+                                    while self.topo.get_nodes()[paths[0][i] ].get('device') == 'router_lw':
+                                        i += 1
+                                    checkpoint = paths[0][i]
+                                    print("ecmp : encap_lw segRoute_encap" + str(host_ip) + " => " + str(checkpoint[1:]))
+                                    self.controller.table_add("encap_lw", "segRoute_encap", [str(host_ip)], [checkpoint[1:]])
 
                             # Check if the ecmp group already exists. The ecmp group is defined by the number of next
                             # ports used, thus we can use dst_macs_ports as key
@@ -176,7 +173,7 @@ class RouterController(cmd2.Cmd):
                                 new_ecmp_group_id = len(switch_ecmp_groups[sw_name]) + 1
                                 switch_ecmp_groups[sw_name][tuple(dst_macs_ports)] = new_ecmp_group_id
 
-                                #A dd group
+                                # Add group
                                 for i, (mac, port) in enumerate(dst_macs_ports):
                                     print("table_add at {}:".format(sw_name))
                                     self.controller.table_add("ecmp_group_to_nhop", "set_nhop", [str(new_ecmp_group_id), str(i)], [str(mac), str(port)])

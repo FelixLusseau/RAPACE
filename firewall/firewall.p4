@@ -32,20 +32,12 @@ control MyIngress(inout headers hdr,
         mark_to_drop(standard_metadata);
     }
 
-    action forward_packet(macAddr_t dstAddr)
+    action forward_packet(macAddr_t dstAddr, bit<9> egress_port)
     {
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
         hdr.ethernet.dstAddr = dstAddr;
 
-        // Simply forward the packet from one port to the other
-        // If input port is 1 => output port 2
-        if (standard_metadata.ingress_port == 1){
-            standard_metadata.egress_spec = 2;
-        }
-        // If input port is 2 => output port 1
-        else if (standard_metadata.ingress_port == 2){
-            standard_metadata.egress_spec = 1;
-        }
+        standard_metadata.egress_spec = egress_port;
     }
 
     // Table of neighbors' MACs to forward the packets

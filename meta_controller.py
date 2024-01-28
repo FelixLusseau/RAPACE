@@ -401,7 +401,7 @@ class RAPACE_CLI(cmd2.Cmd):
         set_rate_lb(args.lb_id, args.rate)
 
     set_port_in_argparser = cmd2.Cmd2ArgumentParser()
-    set_port_in_argparser.add_argument('lb_id', help="The name of the targeted loadbalancer")
+    set_port_in_argparser.add_argument('lb_name', help="The name of the targeted loadbalancer")
     set_port_in_argparser.add_argument('port_in', help="Name of the equipment or host facing the interface that you want to set as port_in")
     @cmd2.with_argparser(set_port_in_argparser)
     def do_set_port_in(self, args):

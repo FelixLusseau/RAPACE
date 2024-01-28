@@ -33,13 +33,15 @@ class RouterlwController(cmd2.Cmd):
 
     def route(self, sw_name):
 
-        # Parcourir tous les commutateurs
+        # Browse all switches for routing rules to their loopback address
         for sw_dst in self.topo.get_p4switches():
-            # Obtenir l'adresse de bouclage du commutateur
             loopback_ip = self.topo.get_nodes()[sw_dst].get('loopback')
 
-            # Obtenir les chemins les plus courts vers le commutateur
-            paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+            # Calculate the shortest paths to the dest switch (if reachable)
+            try:
+                paths = self.topo.get_shortest_paths_between_nodes(sw_name, sw_dst)
+            except:
+                continue
             # print("paths from {} to {} : {}".format(sw_name, sw_dst, paths))
 
             if len(paths) == 1:
@@ -50,21 +52,19 @@ class RouterlwController(cmd2.Cmd):
                 sw_port = self.topo.node_to_node_port_num(sw_name, next_hop)
                 dst_sw_mac = self.topo.node_to_node_mac(next_hop, sw_name)
 
-                # Ajouter la règle
+                # Add the next hop
                 print("table_add at {}:".format(sw_name))
-                print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_sw_mac) + " " + str(sw_port))
+                # print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_sw_mac) + " " + str(sw_port))
                 self.controller.table_add("encap_routing", "segRoute_port", str(sw_dst[1:]), [str(dst_sw_mac), str(sw_port)])
 
             elif len(paths) > 1:
                 next_hops = [x[1] for x in paths]
-                dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name),
-                                self.topo.node_to_node_port_num(sw_name, next_hop))
-                                for next_hop in next_hops]
+                dst_macs_ports = [(self.topo.node_to_node_mac(next_hop, sw_name), self.topo.node_to_node_port_num(sw_name, next_hop)) for next_hop in next_hops]
 
-                # Ajouter la règle pour chaque chemin
+                # Add the next hop for each path
                 for dst_mac, sw_port in dst_macs_ports:
                     print("table_add at {}:".format(sw_name))
-                    print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_mac) + " " + str(sw_port))
+                    # print("encap_routing segRoute_port " + str(sw_dst[1:]) + " => " + str(dst_mac) + " " + str(sw_port))
                     self.controller.table_add("encap_routing", "segRoute_port", str(sw_dst[1:]), [str(dst_mac), str(sw_port)])
 
 

@@ -20,8 +20,8 @@ def send_command_to_controller(controller, command):
             break
         print(response, end='')
 
-def add_loopbacks():
-    # Add loopback addresses to the topology
+def add_lo_and_dev_type():
+    """ Add loopback addresses and device type to the topology"""
     with open('topology.json', 'r') as f:
         data = json.load(f)
 
@@ -37,15 +37,16 @@ def add_loopbacks():
         json.dump(data, f, indent=4)
 
 def generate_logical_network():
+    """ Generate the logical network from the physical network in a different json file"""
     print("Generating logical network...")
     with open('topology.json', 'r') as f:
         data = json.load(f)
     
     for link in data['links'][:]: 
-        for link in data['links'][:]:  # Create a copy of the list to iterate over
+        for link in data['links'][:]:  
             if [link['source'], link['target']] not in [l[:2] for l in network['RAPACE']['Links']] and \
             [link['target'], link['source']] not in [l[:2] for l in network['RAPACE']['Links']]:
-                data['links'].remove(link)
+                data['links'].remove(link) # Remove the link if it's not in the logical network
     
     for host in data['nodes'][:]:
         if host['id'][0] == 'h':
@@ -55,6 +56,7 @@ def generate_logical_network():
         json.dump(data, f, indent=4)
     
 def routes_reload():
+    """Reload the routes of the equipments"""
     print("Reloading routes...")
     for switch, controller in network['RAPACE']['Controllers'].items():
         controller.stdin.write('routes_reload' + '\n')
@@ -78,7 +80,7 @@ def swap(node_id, equipment, *args):
     network['RAPACE']['Switches'][switch] = equipment
     path = equipment + '/' + equipment + '_controller.py'
     network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  
-    sleep(3)
+    sleep(3) # Wait for the P4 equipment to start
     print("The equipment of " + switch + " has been changed to " + equipment + ".")    
     routes_reload()
 
@@ -95,11 +97,12 @@ def add_node(name, type):
             del network['RAPACE']['Controllers'][name + 'Controller']
 
 def see_topology():
+    """Print the topology in the terminal and in the network.png file"""
     topo = network['RAPACE'].copy()
     if 'Controllers' in topo:
         del topo['Controllers']
 
-    pprint.pprint(topo)
+    pprint.pprint(topo) # Print the topology in the terminal (pretty print)
 
     plt.figure()
 
@@ -110,28 +113,26 @@ def see_topology():
     # Create a dictionary where the keys are device types and the values are empty lists
     device_lists = {device_type: [] for device_type in device_types}
 
-    # Now you can add devices to the lists based on their type
+    # Now add devices to the lists based on their type
     for switch, device in network['RAPACE']['Switches'].items():  
         device_type = device  
         device_lists[device_type].append(switch)
     
-    # print(device_lists)
-
-    # Add switches and hosts as nodes
+    # Add switches as nodes
     for device_type, switches in device_lists.items():
         for switch in switches:
             G.add_node(switch, device_type=device_type)
     
-    # Add hosts
+    # Add hosts as nodes
     hosts = network['RAPACE']['Hosts']
     for host in hosts:
         G.add_node(host)
 
     pos = nx.spring_layout(G)
-    # pos = nx.circular_layout(G)  # Use circular layout
+    # pos = nx.circular_layout(G)
 
     # Draw switches with different colors based on their type
-    color_map = {'router': 'blue', 'router_lw': 'cyan', 'firewall': 'red', 'load_balancer': 'green'}  # Replace with your actual device types and colors
+    color_map = {'router': 'green', 'router_lw': 'magenta', 'firewall': 'red', 'load_balancer': 'blue'}
     for device_type, switches in device_lists.items():
         color = color_map[device_type]
         nx.draw_networkx_nodes(G, pos, nodelist=switches, node_color=color)
@@ -167,7 +168,7 @@ def see_topology():
     labels = {**switch_labels, **host_labels}
 
     # Draw labels
-    label_pos = {node: (pos[node][0], pos[node][1] + 0.2) for node in G.nodes}  # Adjust y position of labels
+    label_pos = {node: (pos[node][0], pos[node][1] + 0.25) for node in G.nodes}  # Adjust y position of labels
     nx.draw_networkx_labels(G, label_pos, labels=labels)
     edge_labels = nx.get_edge_attributes(G, "weight")
     nx.draw_networkx_edge_labels(G, pos, edge_labels)
@@ -182,15 +183,18 @@ def see_topology():
     plt.xlim(x_min - 0.4, x_max + 0.4)
     plt.ylim(y_min - 0.4, y_max + 0.4)
 
+    # Save the graph to a file because plt.show() is hard to use through SSH and sudo
     plt.savefig('network.png')
 
 def change_weight(link, weight):
     if isinstance(link, str):
         link = ast.literal_eval(link)
-    mininet.updateLink(*link, weight=weight)
-    mininet.save_topology()
+    mininet.updateLink(*link, weight=weight) # Update the weight of the link in mininet physical topology
     network['RAPACE']['Links'][network['RAPACE']['Links'].index(link)].append("weight = " + weight)
     print("Weight of " + str(link) + " changed to " + weight + ".")
+
+    # Save the physical topology and regenerate the logical topology before reloading the routes
+    mininet.save_topology()
     generate_logical_network()
     routes_reload()
 
@@ -254,14 +258,15 @@ def add_encap_node(node_src, flow, node_dst):
     node_dst = node_dst if node_dst.startswith('s') else 's' + node_dst
     for switch, controller in network['RAPACE']['Switches'].items():
         if switch == node_src and controller == 'router' and network['RAPACE']['Switches'][node_dst] == 'router':
+            # Add rules in the two routers to encapsulate the flow in the two directions
             send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_encap_node ' + flow + ' ' + node_dst)
             reversed_flow = ' '.join(reversed(flow.split()))
             send_command_to_controller(network['RAPACE']['Controllers'][node_dst + 'Controller'], 'add_encap_node ' + reversed_flow + ' ' + node_src)
         elif switch == node_src and controller != 'router':
-            print("The source node must be a router.")
+            print("\033[31mThe source node must be a router.\033[0m")
             return
         elif network['RAPACE']['Switches'][node_dst] != 'router':
-            print("The destination node must be a router.")
+            print("\033[31mThe destination node must be a router.\033[0m")
             return
 
 class RAPACE_CLI(cmd2.Cmd):
@@ -271,12 +276,13 @@ class RAPACE_CLI(cmd2.Cmd):
         print("Generating physical network...")
         global network
         network = generate_network()
-        from network import runMininet # import when network.py is generated
+        from network import runMininet # Import when network.py is generated
         print("Starting mininet...")
         global mininet
         mininet = runMininet()
+        print("\033[32mMininet started.\033[0m")
 
-        add_loopbacks()
+        add_lo_and_dev_type()
 
         generate_logical_network()
 
@@ -289,12 +295,12 @@ class RAPACE_CLI(cmd2.Cmd):
         for switch, controller in network['RAPACE']['Switches'].items():
             path = controller + '/' + controller + '_controller.py'
             network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
-            sleep(1)
+            sleep(1) # Wait for the P4 equipment to start
             if network['RAPACE']['Controllers'][switch + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][switch + 'Controller'].poll() != 0:
-                print(f"The Controller of {switch} has crashed.")
+                print(f"\033[31mThe Controller of {switch} has crashed.\033[0m")
                 del network['RAPACE']['Controllers'][switch + 'Controller']
-        sleep(3)
-        print("Network started.")
+        sleep(3) # Wait for the P4 equipment to start
+        print("\033[32mNetwork started.\033[0m")
         super().__init__()
         # Hide undeletable builtin commands
         self.hidden_commands.append('alias')

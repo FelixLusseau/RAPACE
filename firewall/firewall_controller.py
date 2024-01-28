@@ -33,6 +33,7 @@ class FirewallController(cmd2.Cmd):
         self.controller.table_set_default("forward", "drop", [])
     
     def fill_mac_table(self, sw_name):
+        """ Fill the forward table with the mac addresses of the hosts and switches connected to the switch"""
         for switch in self.topo.get_switches_connected_to(sw_name):
             switch_mac = self.topo.node_to_node_mac(switch, sw_name)
             port = self.topo.node_to_node_port_num(sw_name, switch)
@@ -50,6 +51,7 @@ class FirewallController(cmd2.Cmd):
             print("forward forward_packet " + str(host_mac) + " => " + str(port))
 
     def see_filters(self):
+        """ Display the rules of the firewall and the associated counter of dropped packets"""
         nb_entries = self.controller.table_num_entries('fw')
         if nb_entries == 0:
             print("\033[33mNo rule to display !\033[31m")
@@ -73,7 +75,7 @@ class FirewallController(cmd2.Cmd):
             flow[3] = '17'
         elif flow[3] == 'icmp':
             flow[3] = '1'
-            flow[2] = '0'
+            flow[2] = '0' # No port for icmp
         else:
             print("\033[31mError: protocol " + flow[3] + " not supported ! Use one of 'icmp', 'tcp' or 'udp'\033[0m")
             print("\u200B")

@@ -52,11 +52,14 @@ parser MyParser(packet_in packet,
 control MyDeparser(packet_out packet, in headers hdr) {
     apply {
 
-        //parsed headers have to be added again into the packet.
+        // Parsed headers have to be added again into the packet
         packet.emit(hdr.ethernet);
         packet.emit(hdr.segRoute);
+
+        // For Traceroute
         packet.emit(hdr.ipv4_icmp);
         packet.emit(hdr.icmp);
+        
         packet.emit(hdr.ipv4);
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);

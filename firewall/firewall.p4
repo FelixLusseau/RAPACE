@@ -24,7 +24,7 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    // Counter of incoming packets that contain the counter
+    // Counter of incoming packets and of dropped packets
     counter(1, CounterType.packets) count_in;
     direct_counter(CounterType.packets) rule_counter;
 
@@ -48,6 +48,7 @@ control MyIngress(inout headers hdr,
         }
     }
 
+    // Table of neighbors' MACs to forward the packets
     table forward {
         key = {
             standard_metadata.ingress_port: exact;
@@ -59,11 +60,11 @@ control MyIngress(inout headers hdr,
         size = 2;
     }
 
+    // Table of firewall rules
     table fw {
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
-            // meta.srcPort: exact;
             meta.dstPort: exact;
             hdr.ipv4.protocol: exact;
         }
@@ -87,6 +88,7 @@ control MyIngress(inout headers hdr,
 
             forward.apply();
            
+            // Small trick to avoid the use of one fw table by protocol
             if (hdr.ipv4.protocol == TYPE_TCP){
                 meta.dstPort = hdr.tcp.dstPort;
             }

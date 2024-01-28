@@ -22,24 +22,22 @@ control MyIngress(inout headers hdr,
                   inout metadata meta,
                   inout standard_metadata_t standard_metadata) {
 
-    // Counter of incoming packets that contain the counter
+    // Counter of incoming packets
     counter(1, CounterType.packets) count_in;
 
     action drop() {
         mark_to_drop(standard_metadata);
     }
 
+    // Forward packets to the checkpoint specified in the table without IP
     action segRoute_port(macAddr_t dstAddr, egressSpec_t port) {
-        //set the src mac address as the previous dst, this is not correct right?
+        // Prepare the packet for forwarding
         hdr.ethernet.srcAddr = hdr.ethernet.dstAddr;
-
-       //set the destination mac address that we got from the match in the table
         hdr.ethernet.dstAddr = dstAddr;
-
-        //set the output port that we also get from the table
         standard_metadata.egress_spec = port;
     }
 
+    // Forward packets to the next hop with their tag
     table encap_routing {
         key = {
             hdr.segRoute.checkpoint: exact;
@@ -54,6 +52,7 @@ control MyIngress(inout headers hdr,
         // Count the entering packets
         count_in.count(0);
         
+        // Forward the packet to the next checkpoint only if tunnelled
         if (hdr.segRoute.isValid()){
             encap_routing.apply();
         }

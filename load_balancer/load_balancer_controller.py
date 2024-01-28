@@ -177,8 +177,9 @@ class LoadBalancerController(cmd2.Cmd):
 
 
     def update_packet_rate(self, rate):
-        self.packet_rate = float(rate)/1000000
-        self.controller.meter_array_set_rates("my_meter", [(self.packet_rate,1),(self.packet_rate,1)])
+        self.packet_rate = float(rate)
+        rate = self.packet_rate/1000000
+        self.controller.meter_array_set_rates("my_meter", [(rate,1),(rate,1)])
         print(f"Packet rate updated ! Now is : {self.packet_rate}") 
 
     def see_load(self):
@@ -238,6 +239,7 @@ class LoadBalancerController(cmd2.Cmd):
         if(self.set_tables() == 1):
             print(f"Error: no port_in defined for loab_balancer {self.sw_name}, please define a port with set_port_in")
             self.port_in = 0
+        self.update_packet_rate(self.packet_rate)
         print("\u200B")
 
 

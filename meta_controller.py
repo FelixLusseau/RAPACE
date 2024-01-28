@@ -16,7 +16,10 @@ def flush_controller():
                 response = network['RAPACE']['Controllers'][switch + 'Controller'].stdout.readline()
                 if response == "\u200B\n":
                     break
-                print(response, end='')    
+                elif response.startswith("\033[32m"):
+                    print(response, end='')
+                else:
+                    print(response, end='', file=open("/dev/null", "w")) # Print the response in /dev/null to avoid printing it in the terminal
 
 def send_command_to_controller(controller, command):
     """Send a command to the controller and print the response"""
@@ -311,18 +314,18 @@ class RAPACE_CLI(cmd2.Cmd):
             path = controller + '/' + controller + '_controller.py'
             network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)      
             sleep(1) # Wait for the P4 equipment to start
+            # Check if the controller has crashed immediatly
             if network['RAPACE']['Controllers'][switch + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][switch + 'Controller'].poll() != 0:
                 print(f"\033[31mThe Controller of {switch} has crashed.\033[0m")
                 del network['RAPACE']['Controllers'][switch + 'Controller']
-        print("Please wait for the equipments to set up")
-        sleep(3) # Wait for the P4 equipment to start
+        print("Please wait for the equipments to be ready...")
         super().__init__()
         # Hide undeletable builtin commands
         self.hidden_commands.append('alias')
         self.hidden_commands.append('macro')
         self.hidden_commands.append('set')
         flush_controller()
-        print("\n\n\033[32mNetwork started.\033[0m")
+        print("\n\033[32mNetwork started !\033[0m\n")
 
     # cmd2 methods -> delete the commands we don't want
     delattr(cmd2.Cmd, 'do_shell')

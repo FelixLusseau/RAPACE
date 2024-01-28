@@ -14,16 +14,6 @@ class RouterController(cmd2.Cmd):
     prompt = 'Router_CLI> '
 
     def __init__(self, sw_name):
-        # # Save the original file descriptors for stdout and stderr
-        # orig_stdout = os.dup(1)
-        # orig_stderr = os.dup(2)
-
-        # # Open /dev/null and replace stdout and stderr with it
-        # devnull = os.open(os.devnull, os.O_WRONLY)
-        # os.dup2(devnull, 1)
-        # os.dup2(devnull, 2)
-        # os.close(devnull)
-
         super().__init__()  # Call the cmd2.Cmd __init__ method
         self.topo = load_topo('logical_topology.json')
         self.sw_name = sw_name
@@ -37,10 +27,6 @@ class RouterController(cmd2.Cmd):
         self.controller.register_write('device_id_register', 0, sw_name[1:])
         print(f"\033[32mRouter {sw_name} ready\033[0m", flush=True)
         print("\u200B")
-
-        # # Restore the original file descriptors for stdout and stderr
-        # os.dup2(orig_stdout, 1)
-        # os.dup2(orig_stderr, 2)
     
     def reset_state(self):
         self.controller.reset_state()

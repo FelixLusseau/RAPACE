@@ -25,17 +25,17 @@ class LoadBalancerController(cmd2.Cmd):
         self.update_packet_rate(1)
         self.reset_state()
         self.set_table_defaults()
-        
+        print(f"\033[32mLoad_balancer {sw_name} ready\033[0m", flush=True)
+        print("\u200B")
+
     def reset_state(self):
         self.controller.reset_state()
         self.controller.table_clear("port_to_nhop")
         self.controller.table_clear("ecmp_nhop")
-        #self.controller.table_clear("packet_rate_filter")
 
     def set_table_defaults(self):
         self.controller.table_set_default("port_to_nhop", "drop", [])
         self.controller.table_set_default("ecmp_nhop","drop",[])
-        #self.controller.table_set_default("packet_rate_filter","drop",[])
 
     def set_packet_rate(self, rate):
         self.packet_rate = rate
@@ -50,7 +50,7 @@ class LoadBalancerController(cmd2.Cmd):
                 return self.topo.node_to_node_mac(host, self.sw_name)
 
     #return the list of all the "out" port of a load_balancer
-    def get_list_port_connected(self):
+    def get_list_port_out_connected(self):
         port_list = []
 
         for sw in self.topo.get_switches_connected_to(self.sw_name):
@@ -64,7 +64,16 @@ class LoadBalancerController(cmd2.Cmd):
                 port_list.append(host_port)
 
         return port_list
+    
+    def port_out_possibilities(self):
+        #get the number of port out possibilites
+        num_nhop = len(self.topo.get_switches_connected_to(self.sw_name)) - 1
+        if num_nhop < 0:
+            num_nhop = 0 #just in case to avoid crash if non sense topology happens
+        return num_nhop
 
+
+    #create_tables and fill it if they don't exist
     def set_tables(self):
         
         mac_address_port_in = self.get_mac_address_port_in()
@@ -75,11 +84,10 @@ class LoadBalancerController(cmd2.Cmd):
             return 0
 
         #get the number of port out possibilites
-        num_nhop = len(self.topo.get_switches_connected_to(self.sw_name)) - 1
-        if num_nhop < 0:
-            num_nhop = 0 #just in case to avoid crash if non sense topology happens
+        num_nhop = self.port_out_possibilities()
 
-        port_out = self.get_list_port_connected()
+        #index_out to give each table_match an unique port output
+        port_out = self.get_list_port_out_connected()
         index_out = 0
 
         #we scan neighbor to create our tables
@@ -87,8 +95,6 @@ class LoadBalancerController(cmd2.Cmd):
         #                      else hash function to get a random port out
         #table: ecmp_nhop : from the hash result return a valid port_out
             
-        is_port_in_host = 0 #0=true, 1=false
-
         for sw in self.topo.get_switches_connected_to(self.sw_name):
             sw_port = self.topo.node_to_node_port_num(self.sw_name, sw)
             sw_mac = self.topo.node_to_node_mac(self.sw_name, sw)
@@ -121,6 +127,7 @@ class LoadBalancerController(cmd2.Cmd):
                 print(f"Table: ecmp_nhop. Line added: {index_out} ecmp_hash {host_mac} {port_out[index_out]}\n")
                 index_out = index_out + 1
 
+    #same code as set_tables, but it modifies entries not creating new.
     def update_tables(self):
         mac_address_port_in = self.get_mac_address_port_in()
 
@@ -130,11 +137,10 @@ class LoadBalancerController(cmd2.Cmd):
             return 0
 
         #get the number of port out possibilites
-        num_nhop = len(self.topo.get_switches_connected_to(self.sw_name)) - 1
-        if num_nhop < 0:
-            num_nhop = 0 #just in case to avoid crash if non sense topology happens
+        num_nhop = self.port_out_possibilities()
 
-        port_out = self.get_list_port_connected()
+        #index_out to give each table_match an unique port output
+        port_out = self.get_list_port_out_connected()
         index_out = 0
 
         for sw in self.topo.get_switches_connected_to(self.sw_name):
@@ -171,11 +177,10 @@ class LoadBalancerController(cmd2.Cmd):
 
 
     def update_packet_rate(self, rate):
-        print("packet rate updated !")
         self.controller.meter_array_set_rates("my_meter", [(rate,1),(rate,1)])
+        print("packet rate updated !") 
 
     def see_load(self):
-        print("Total counter: ")
         self.controller.counter_read('count_in', 0)
         print("\u200B")
 
@@ -205,6 +210,7 @@ class LoadBalancerController(cmd2.Cmd):
     def do_set_pck_rate(self, rate):
         self.packet_rate = float(rate)/1000000
         self.update_packet_rate(self.packet_rate)
+        print("\u200B")
 
     def do_set_port_in(self, args):
         #if first time
@@ -224,14 +230,15 @@ class LoadBalancerController(cmd2.Cmd):
                 print("Port_in changed")
             else:
                 print("\033[31mError, bad switch or host given\033[0m")
+        print("\u200B")
 
     def do_routes_reload(self):
         self.reset_state()
         self.topo = load_topo('logical_topology.json')
-        self.update_tables()
         if(self.set_tables() == 1):
             print(f"Error: no port_in defined for loab_balancer {self.sw_name}, please define a port with set_port_in")
             self.port_in = 0
+        print("\u200B")
 
 
 

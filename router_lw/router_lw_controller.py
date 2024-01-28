@@ -23,6 +23,8 @@ class RouterlwController(cmd2.Cmd):
         self.reset_state()
         self.set_table_defaults()
         self.route(self.sw_name)
+        print(f"\033[32mRouter_lw {sw_name} ready\033[0m", flush=True)
+        print("\u200B")
 
     def reset_state(self):
         self.controller.reset_state()
@@ -69,7 +71,6 @@ class RouterlwController(cmd2.Cmd):
 
 
     def see_load(self):
-        print("Total counter: ")
         self.controller.counter_read('count_in', 0)
         print("\u200B")
 

@@ -35,6 +35,8 @@ class RouterController(cmd2.Cmd):
         self.route(self.sw_name)
         self.set_icmp_ingress_port_table(self.sw_name)
         self.controller.register_write('device_id_register', 0, sw_name[1:])
+        print(f"\033[32mRouter {sw_name} ready\033[0m", flush=True)
+        print("\u200B")
 
         # # Restore the original file descriptors for stdout and stderr
         # os.dup2(orig_stdout, 1)
@@ -186,7 +188,6 @@ class RouterController(cmd2.Cmd):
 
 
     def see_load(self):
-        print("Total counter: ")
         self.controller.counter_read('count_in', 0)
         print("\u200B")
 

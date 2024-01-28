@@ -8,12 +8,21 @@ import pprint
 import networkx as nx
 import matplotlib.pyplot as plt
 
+def flush_controller():
+    for switch, controller in network['RAPACE']['Switches'].items():
+        if switch + 'Controller' in network['RAPACE']['Controllers']:
+            network['RAPACE']['Controllers'][switch + 'Controller'].stdout.flush()
+            while True:
+                response = network['RAPACE']['Controllers'][switch + 'Controller'].stdout.readline()
+                if response == "\u200B\n":
+                    break
+                print(response, end='')    
+
 def send_command_to_controller(controller, command):
     """Send a command to the controller and print the response"""
     controller.stdin.write(command + '\n')
     controller.stdin.flush()
 
-    # Read the response
     while True:
         response = controller.stdout.readline()
         if response == '\u200B\n':
@@ -80,7 +89,7 @@ def swap(node_id, equipment, *args):
     network['RAPACE']['Switches'][switch] = equipment
     path = equipment + '/' + equipment + '_controller.py'
     network['RAPACE']['Controllers'][switch + 'Controller'] = subprocess.Popen(['python3', path, switch], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  
-    sleep(3) # Wait for the P4 equipment to start
+    sleep(5) # Wait for the P4 equipment to start
     print("The equipment of " + switch + " has been changed to " + equipment + ".")    
     routes_reload()
 
@@ -241,17 +250,23 @@ def add_fw_rule(flow):
             if controller == 'firewall':
                 send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'add_fw_rule ' + flow)
 
-def set_rate_lb(rate):
+def set_rate_lb(lb_id, rate):
     for switch, controller in network['RAPACE']['Switches'].items():
-            if controller == 'load_balancer':
+            if controller == 'load_balancer' and switch == lb_id:
                 send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_rate_lb ' + rate)
 
 def set_port_in(lb_id, port_in):
     lb_id = lb_id if lb_id.startswith('s') else 's' + lb_id
-    port_in = port_in if port_in.startswith('s') else 's' + port_in
     for switch, controller in network['RAPACE']['Switches'].items():
             if controller == 'load_balancer' and switch == lb_id:
                 send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_port_in ' + port_in)
+
+def see_rate():
+    for switch, controller in network['RAPACE']['Switches'].items():
+        if switch + 'Controller' in network['RAPACE']['Controllers'] and controller == 'load_balancer':
+            print("For load_balancer " + switch + " :")
+            send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'see rate')
+            print("\n")
 
 def add_encap_node(node_src, flow, node_dst):
     node_src = node_src if node_src.startswith('s') else 's' + node_src
@@ -299,13 +314,15 @@ class RAPACE_CLI(cmd2.Cmd):
             if network['RAPACE']['Controllers'][switch + 'Controller'].poll() is not None and network['RAPACE']['Controllers'][switch + 'Controller'].poll() != 0:
                 print(f"\033[31mThe Controller of {switch} has crashed.\033[0m")
                 del network['RAPACE']['Controllers'][switch + 'Controller']
+        print("Please wait for the equipments to set up")
         sleep(3) # Wait for the P4 equipment to start
-        print("\033[32mNetwork started.\033[0m")
         super().__init__()
         # Hide undeletable builtin commands
         self.hidden_commands.append('alias')
         self.hidden_commands.append('macro')
         self.hidden_commands.append('set')
+        flush_controller()
+        print("\n\n\033[32mNetwork started.\033[0m")
 
     # cmd2 methods -> delete the commands we don't want
     delattr(cmd2.Cmd, 'do_shell')
@@ -329,10 +346,10 @@ class RAPACE_CLI(cmd2.Cmd):
 
 
     see_argparser = cmd2.Cmd2ArgumentParser()
-    see_argparser.add_argument('args', choices=['topology', 'filters', 'load', 'tunnelled'])
+    see_argparser.add_argument('args', choices=['topology', 'filters', 'load', 'tunnelled', 'rate'])
     @cmd2.with_argparser(see_argparser)
     def do_see(self, opts):
-        """topology|filters|load - See the topology, the filters, the load or the tunnelled flows"""
+        """topology|filters|load|tunelled|rate - See the topology, the filters, the load, the tunnelled flows or the packet rate"""
         if opts.args == 'topology':
             see_topology()
         elif opts.args == 'filters':
@@ -341,6 +358,8 @@ class RAPACE_CLI(cmd2.Cmd):
             see_load()
         elif opts.args == 'tunnelled':
             see_tunnelled()
+        elif opts.args == 'rate':
+            see_rate()
 
 
     change_weight_argparser = cmd2.Cmd2ArgumentParser()
@@ -377,15 +396,17 @@ class RAPACE_CLI(cmd2.Cmd):
         add_fw_rule(flow)
 
     set_rate_lb_argparser = cmd2.Cmd2ArgumentParser()
-    set_rate_lb_argparser.add_argument('pkts/s', help="The new rate of the loadbalancer")
+    set_rate_lb_argparser.add_argument('lb_id', help="the name of the targeted load_balancer")
+    set_rate_lb_argparser.add_argument('rate', help="The new rate of the loadbalancer in packet/seconds")
     @cmd2.with_argparser(set_rate_lb_argparser)
     def do_set_rate_lb(self, args):
         """<pkts/s> - Set the rate of the loadbalancer"""
-        set_rate_lb(args.pkts_s)
+        set_rate_lb(args.lb_id, args.rate)
 
     set_port_in_argparser = cmd2.Cmd2ArgumentParser()
-    set_port_in_argparser.add_argument('lb_id', help="The name of the loadbalancer")
-    set_port_in_argparser.add_argument('port_in', help="The new port_in of the loadbalancer")
+    set_port_in_argparser.add_argument('lb_id', help="The name of the targeted loadbalancer")
+    set_port_in_argparser.add_argument('port_in', help="Name of the equipment or host facing the interface that you want to set as port_in")
+    @cmd2.with_argparser(set_port_in_argparser)
     def do_set_port_in(self, args):
         """<lb_id> <port_in> - Set the port_in of the loadbalancer"""
         set_port_in(args.lb_id, args.port_in)

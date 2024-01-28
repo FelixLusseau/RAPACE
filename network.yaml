@@ -4,8 +4,6 @@ RAPACE:
     s1: load_balancer
     s2: firewall
     s3: firewall
-    s4: router
-    s5: router_lw
   Hosts:
     h1:
     h2:

@@ -1,6 +1,7 @@
 from p4utils.utils.helper import load_topo
 from p4utils.utils.sswitch_thrift_API import SimpleSwitchThriftAPI
 from p4utils.utils.compiler import * 
+import sys
 
 def swap(p4switch, device):
     # Load the topology in a networkx graph

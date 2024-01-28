@@ -23,6 +23,8 @@ class FirewallController(cmd2.Cmd):
         self.reset_state()
         self.set_table_defaults()
         self.fill_mac_table(sw_name)
+        print(f"\033[32mFirewall {sw_name} ready\033[0m", flush=True)
+        print("\u200B")
 
     def reset_state(self):
         self.controller.reset_state()
@@ -64,7 +66,6 @@ class FirewallController(cmd2.Cmd):
         print("\u200B")
 
     def see_load(self):
-        print("Total counter: ")
         self.controller.counter_read('count_in', 0)
         print("\u200B")
 

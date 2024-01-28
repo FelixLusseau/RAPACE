@@ -15,7 +15,6 @@ def flush_controller():
             network['RAPACE']['Controllers'][switch + 'Controller'].stdout.flush()
             while True:
                 response = network['RAPACE']['Controllers'][switch + 'Controller'].stdout.readline()
-                print(switch)
                 if response == "\u200B\n":
                     break
                 elif response.startswith("\033[32m"):

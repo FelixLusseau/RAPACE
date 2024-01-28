@@ -1,7 +1,7 @@
 RAPACE:
   Switches:
-    s0: router
-    s1: router
+    s0: load_balancer
+    s1: load_balancer
   Hosts:
     h1:
     h2:

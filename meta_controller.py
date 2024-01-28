@@ -15,6 +15,7 @@ def flush_controller():
             network['RAPACE']['Controllers'][switch + 'Controller'].stdout.flush()
             while True:
                 response = network['RAPACE']['Controllers'][switch + 'Controller'].stdout.readline()
+                print(switch)
                 if response == "\u200B\n":
                     break
                 elif response.startswith("\033[32m"):
@@ -80,7 +81,7 @@ def routes_reload():
         controller.stdin.write('routes_reload' + '\n')
         controller.stdin.flush()
 
-def swap(node_id, equipment, *args):
+def swap(node_id, equipment):
     """Swap the equipment of a node or add one"""
     switch = node_id if node_id.startswith('s') else 's' + node_id
     if switch not in network['RAPACE']['Switches']:
@@ -332,14 +333,12 @@ class RAPACE_CLI(cmd2.Cmd):
     swap_argparser = cmd2.Cmd2ArgumentParser()
     swap_argparser.add_argument('node_id', help="The name of the node")
     swap_argparser.add_argument('equipment', choices=['firewall', 'router', 'router_lw', 'load_balancer'], help="The new equipment of the node")
-    swap_argparser.add_argument('args', nargs='*')
     @cmd2.with_argparser(swap_argparser)
     def do_swap(self, args):
-        """<node_id> <equipment> [args] - Swap the equipment of a node or add one"""
+        """<node_id> <equipment>- Swap the equipment of a node or add one"""
         node_id = args.node_id
         equipment = args.equipment
-        extra_args = args.args
-        swap(node_id, equipment, *extra_args)
+        swap(node_id, equipment)
 
 
     see_argparser = cmd2.Cmd2ArgumentParser()
@@ -405,8 +404,8 @@ class RAPACE_CLI(cmd2.Cmd):
     set_port_in_argparser.add_argument('port_in', help="Name of the equipment or host facing the interface that you want to set as port_in")
     @cmd2.with_argparser(set_port_in_argparser)
     def do_set_port_in(self, args):
-        """<lb_id> <port_in> - Set the port_in of the loadbalancer"""
-        set_port_in(args.lb_id, args.port_in)
+        """<lb_name> <port_in> - Set the port_in of the loadbalancer"""
+        set_port_in(args.lb_name, args.port_in)
 
     add_encap_node_argparser = cmd2.Cmd2ArgumentParser()
     add_encap_node_argparser.add_argument('node_src', help="The name of the source node")

@@ -222,6 +222,7 @@ class RouterController(cmd2.Cmd):
         self.controller.table_set_default("encap_routing", "drop", [])
         self.topo = load_topo('logical_topology.json')
         self.route(self.sw_name)
+        print("\u200B")
 
 def matches_regex(string, regex):
     return re.match(regex, string) is not None

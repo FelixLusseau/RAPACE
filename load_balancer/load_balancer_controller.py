@@ -22,9 +22,9 @@ class LoadBalancerController(cmd2.Cmd):
         self.thrift_port = self.topo.get_thrift_port(sw_name)
         self.controller = SimpleSwitchThriftAPI(self.thrift_port)
         self.controller = swap(self.sw_name, 'load_balancer')
-        self.update_packet_rate(1)
         self.reset_state()
         self.set_table_defaults()
+        self.update_packet_rate(1)
         print(f"\033[32mLoad_balancer {sw_name} ready\033[0m", flush=True)
         print("\u200B")
 
@@ -177,8 +177,9 @@ class LoadBalancerController(cmd2.Cmd):
 
 
     def update_packet_rate(self, rate):
-        self.controller.meter_array_set_rates("my_meter", [(rate,1),(rate,1)])
-        print("Packet rate updated !") 
+        self.packet_rate = float(rate)/1000000
+        self.controller.meter_array_set_rates("my_meter", [(self.packet_rate,1),(self.packet_rate,1)])
+        print(f"Packet rate updated ! Now is : {self.packet_rate}") 
 
     def see_load(self):
         self.controller.counter_read('count_in', 0)
@@ -208,8 +209,7 @@ class LoadBalancerController(cmd2.Cmd):
             self.see_rate()
 
     def do_set_pck_rate(self, rate):
-        self.packet_rate = float(rate)/1000000
-        self.update_packet_rate(self.packet_rate)
+        self.update_packet_rate(rate)
         print("\u200B")
 
     def do_set_port_in(self, args):

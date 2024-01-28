@@ -11,11 +11,10 @@ def runMininet():
 	net.addP4Switch('s1')
 	net.addP4Switch('s2')
 	net.addP4Switch('s3')
-	net.addP4Switch('s4')
 
 	# Generate links between switches in a full mesh topology
-	for i in range(0, 5):
-		for j in range(i, 5):
+	for i in range(0, 4):
+		for j in range(i, 4):
 			if i != j:
 				net.addLink(f's{i}', f's{j}')
 
@@ -24,7 +23,7 @@ def runMininet():
 
 	# Generate links between hosts and switches according to the asked topology
 	net.addLink('h1', 's0')
-	net.addLink('s4', 'h2')
+	net.addLink('s3', 'h2')
 
 	# Assignment strategy
 	net.l3()

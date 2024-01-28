@@ -250,7 +250,7 @@ def add_fw_rule(flow):
 def set_rate_lb(lb_id, rate):
     for switch, controller in network['RAPACE']['Switches'].items():
             if controller == 'load_balancer' and switch == lb_id:
-                send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_rate_lb ' + rate)
+                send_command_to_controller(network['RAPACE']['Controllers'][switch + 'Controller'], 'set_pck_rate ' + rate)
 
 def set_port_in(lb_id, port_in):
     lb_id = lb_id if lb_id.startswith('s') else 's' + lb_id
@@ -417,14 +417,6 @@ class RAPACE_CLI(cmd2.Cmd):
         """<node_src> <flow> <node_dst> - Add an encapsulation node"""
         flow = ' '.join(args.flow)
         add_encap_node(args.node_src, flow, args.node_dst)
-
-    add_node_argparser = cmd2.Cmd2ArgumentParser()
-    add_node_argparser.add_argument('name', help="The name of the equipment")
-    add_node_argparser.add_argument('type',choices=['firewall', 'router', 'router_lw', 'load_balancer'], help="The type of the node")
-    @cmd2.with_argparser(add_node_argparser)
-    def do_add_node(self, args):
-        """<node_name> <type>"""
-        add_node(args.name, args.type)
         
 
 # Main function
